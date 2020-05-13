@@ -150,7 +150,8 @@ def train(opt, model, optim, lr_scheduler):
         train_xs.extend(val_x)
         train_ys.extend(train_y)
         train_ys.extend(val_y)
-
+        print(len(train_xs))
+        print(len(test_xs))
         tr_dataloader = DataLoader(BatchData(train_xs, train_ys, input_transform),
                     batch_size=opt.batch_size, shuffle=True, drop_last=True)
         val_dataloader = DataLoader(BatchData(val_x, val_y, input_transform_eval),
@@ -206,22 +207,22 @@ def train(opt, model, optim, lr_scheduler):
                 best_acc = avg_acc
                 best_state = model.state_dict()
 
-    torch.save(model.state_dict(), last_model_path)
+        torch.save(model.state_dict(), last_model_path)
 
-    for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
-        save_list_to_file(os.path.join(opt.experiment_root,
-                                   name + '.txt'), locals()[name])
+        for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
+            save_list_to_file(os.path.join(opt.experiment_root,
+                                       name + '.txt'), locals()[name])
 
-    print('Testing with last model..')
-    test(opt=opt,
-        test_dataloader=test_data,
-         model=model)
+        print('Testing with last model..')
+        test(opt=opt,
+            test_dataloader=test_data,
+             model=model)
 
-    model.load_state_dict(best_state)
-    print('Testing with best model..')
-    test(opt=opt,
-         test_dataloader=test_data,
-         model=model)
+        model.load_state_dict(best_state)
+        print('Testing with best model..')
+        test(opt=opt,
+             test_dataloader=test_data,
+             model=model)
 
 
 def test(opt, test_dataloader, model):
