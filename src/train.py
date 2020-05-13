@@ -175,8 +175,7 @@ def train(opt, model, optim, lr_scheduler):
                 model_output = model(x)
                 #print(model_output.size())
                 #print("#######model_output:{}".format(model_output.size()))
-                loss, acc, prototype = loss_fn(model_output, target=y,
-                                    n_support=opt.num_support_tr, opt=opt, old_prototypes=prototypes,inc_i=inc_i)
+                loss, acc, prototype = loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=prototypes,inc_i=inc_i)
                 
                 loss.backward()
                 optim.step()
@@ -217,13 +216,13 @@ def train(opt, model, optim, lr_scheduler):
         print('Testing with last model..')
         test(opt=opt,
             test_dataloader=test_data,
-             model=model)
+             model=model, prototypes = prototypes)
 
         model.load_state_dict(best_state)
         print('Testing with best model..')
         test(opt=opt,
              test_dataloader=test_data,
-             model=model)
+             model=model, prototypes = prototypes)
     torch.save(model.state_dict(), last_model_path)
 
     for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
