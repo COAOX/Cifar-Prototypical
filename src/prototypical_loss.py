@@ -100,7 +100,7 @@ def prototypical_loss(input, target, n_support):
     #print(log_p_y.type())
     #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
 
-    loss_val = log_p_y.squeeze().view(-1).mean()-torch.masked_select(dists.transpose(0,1),target_inds.bool()).mean() 
+    loss_val = log_p_y.squeeze().view(-1).mean()+torch.masked_select(dists.transpose(0,1),target_inds.bool()).mean() 
     
     acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
 
