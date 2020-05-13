@@ -130,6 +130,7 @@ def train(opt, model, optim, lr_scheduler):
     train_xs = []
     train_ys = []
     test_accs = []
+    prototypes = None
 
     for inc_i in range(opt.stage):
         print(f"Incremental num : {inc_i}")
@@ -173,12 +174,16 @@ def train(opt, model, optim, lr_scheduler):
                 model_output = model(x)
                 #print(model_output.size())
                 #print("#######model_output:{}".format(model_output.size()))
-                loss, acc = loss_fn(model_output, target=y,
-                                    n_support=opt.num_support_tr)
+                loss, acc, prototype = loss_fn(model_output, target=y,
+                                    n_support=opt.num_support_tr, opt, prototypes,inc_i)
                 loss.backward()
                 optim.step()
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
+            if not prototypes is None:
+                prototypes = torch.cat([prototypes,prototype],dim=0)
+            else:
+                prototypes = prototype
             avg_loss = np.mean(train_loss)
             avg_acc = np.mean(train_acc)
             print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
@@ -192,8 +197,8 @@ def train(opt, model, optim, lr_scheduler):
             for i, (x, y) in enumerate(tqdm(val_dataloader)):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
-                loss, acc = loss_fn(model_output, target=y,
-                                    n_support=opt.num_support_val)
+                loss, acc, prototype = loss_fn(model_output, target=y,
+                                    n_support=opt.num_support_val, opt, prototypes, inc_i)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
@@ -225,7 +230,7 @@ def train(opt, model, optim, lr_scheduler):
              model=model)
 
 
-def test(opt, test_dataloader, model):
+def test(opt, test_dataloader, model, prototypes):
     '''
     Test the model trained with the prototypical learning algorithm
     '''
@@ -238,8 +243,8 @@ def test(opt, test_dataloader, model):
         for i, (x, y) in enumerate(tqdm(tr_dataloader)):
             x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
-            _, acc = loss_fn(model_output, target=y,
-                             n_support=opt.num_support_val)
+            _, acc, _ = loss_fn(model_output, target=y,
+                             n_support=opt.num_support_val, opt, prototypes, None)
             avg_acc.append(acc.item())
     avg_acc = np.mean(avg_acc)
     print('Test Acc: {}'.format(avg_acc))

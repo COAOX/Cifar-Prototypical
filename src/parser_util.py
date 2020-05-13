@@ -83,5 +83,6 @@ def get_parser():
     parser.add_argument('--max_size', default = 2000, type = int)
     parser.add_argument('--total_cls', default = 100, type = int)
     parser.add_argument('--stage',default = 5, type = int)
+    parser.add_argument('--class_per_stage',default = 20, type = int)
 
     return parser

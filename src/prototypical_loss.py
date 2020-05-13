@@ -34,7 +34,7 @@ def euclidean_dist(x, y):
     return torch.pow(x - y, 2).sum(2)
 
 
-def prototypical_loss(input, target, n_support):
+def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     '''
     Inspired by https://github.com/jakesnell/prototypical-networks/blob/master/protonets/models/few_shot.py
 
@@ -59,7 +59,7 @@ def prototypical_loss(input, target, n_support):
 
     # FIXME when torch.unique will be available on cuda too
     classes = torch.unique(target_cpu)
-    n_classes = len(classes)
+    
     n_target = len(target_cpu)
     # FIXME when torch will support where as np
     # assuming n_query, n_target constants
@@ -67,7 +67,14 @@ def prototypical_loss(input, target, n_support):
 
     support_idxs = list(map(supp_idxs, classes))
 
-    prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
+    n_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
+    if inc_i is None or len(old_prototypes)>=(inc_i+1)*opt.class_per_stage:
+        prototypes = old_prototypes
+    elif not old_prototypes is None:
+        prototypes = torch.cat([old_prototypes,n_prototypes],dim=0)
+    else:
+        prototypes = n_prototypes
+    n_classes = len(prototypes)
     # FIXME when torch will support where as np
     #print(n_support)
     #print(target_cpu)
@@ -114,4 +121,4 @@ def prototypical_loss(input, target, n_support):
     #loss_val = -log_p_y.gather(1, target_inds).squeeze().view(-1).mean()
     acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
 
-    return loss_val,  acc_val
+    return loss_val,  acc_val, n_prototypes
