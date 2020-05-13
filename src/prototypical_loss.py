@@ -61,6 +61,7 @@ def prototypical_loss(input, target, n_support):
     # FIXME when torch.unique will be available on cuda too
     classes = torch.unique(target_cpu)
     n_classes = len(classes)
+    n_target = len(target_cpu)
     # FIXME when torch will support where as np
     # assuming n_query, n_target constants
     #n_query = target_cpu.eq(classes[0].item()).sum().item() - n_support
@@ -74,24 +75,33 @@ def prototypical_loss(input, target, n_support):
     #for x in classes:
         #print("{}:{}".format(x,target_cpu.eq(x).nonzero()))
     #print(list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:], classes)))
-    query_idxs = torch.cat(list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:], classes))).view(-1)
+    query_idlist = list(map(lambda c: target_cpu.eq(c).nonzero(), classes))
+    query_idxs = torch.cat(query_idlist).view(-1)
     #print(query_idxs)
     #query_samples = torch.stack([input_cpu[query_lists] for query_lists in query_idxs])
     query_samples = input_cpu[query_idxs]
-    #print(query_samples)
+    #print(query_samples.size())
+    #print(prototypes.size())
     n_query = len(query_idxs)
-    #print(n_query)
-    dists = euclidean_dist(query_samples, prototypes)
-
+    dists = euclidean_dist(input_cpu, prototypes)
+    print(dists)
     log_p_y = F.log_softmax(-dists, dim=1).view(n_classes, n_query, -1)
-    #print(log_p_y)
-    target_inds = torch.arange(0, n_classes)
-    target_inds = target_inds.view(n_classes, 1, 1)
-    target_inds = target_inds.expand(n_classes, n_query, 1).long()
-    #print(log_p_y)
-    #print(log_p_y.gather(1, target_inds))
-    loss_val = -log_p_y.gather(1, target_inds).squeeze().view(-1).mean()
-    _, y_hat = log_p_y.max(1)
-    acc_val = y_hat.eq(target_inds.squeeze()).float().mean()
+    print(log_p_y)
+    #target_inds = torch.arange(0, n_query)
+    #target_inds = target_inds.view(1, n_query)
+    #target_inds = target_inds.expand(n_classes, n_query).long()
+    #target_inds = target_inds.eq()
+    _, y_hat = log_p_y.max(0)
+    target_inds = torch.zeros(len(target_cpu),n_classes).long()
+    
+    target_inds = target_inds.scatter_(dim=1, index=target_cpu.unsqueeze(1).long(), src=torch.ones(len(target_cpu), n_classes).long())
+    target_inds = target_inds.transpose(0,1)
+    #print(target_inds.size())
+    #print(log_p_y.type())
+    #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
+
+    loss_val = log_p_y.squeeze().view(-1).mean()-torch.masked_select(dists.transpose(0,1),target_inds.byte()).mean() 
+    
+    acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
 
     return loss_val,  acc_val

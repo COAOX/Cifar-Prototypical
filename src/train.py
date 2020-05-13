@@ -204,7 +204,6 @@ def train(opt, model, optim, lr_scheduler):
             save_list_to_file(os.path.join(opt.experiment_root,
                                        name + '.txt'), locals()[name])
 
-        best_state, best_acc, train_loss, train_acc, val_loss, val_acc = res
         print('Testing with last model..')
         test(opt=options,
             test_dataloader=test_data,
