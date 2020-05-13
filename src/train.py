@@ -103,8 +103,7 @@ def testf(opt, test_dataloader, model, prototypes):
     device = 'cuda:0' if torch.cuda.is_available() and opt.cuda else 'cpu'
     avg_acc = list()
     for epoch in range(10):
-        test_iter = iter(test_dataloader)
-        for i, (x, y) in enumerate(tqdm(tr_dataloader)):
+        for i, (x, y) in enumerate(tqdm(test_dataloader)):
             x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
             _, acc, _ = loss_fn(model_output, target=y,
