@@ -2,7 +2,7 @@
 import torch
 from torch.nn import functional as F
 from torch.nn.modules import Module
-
+from torch.autograd import Variable
 
 class PrototypicalLoss(Module):
     '''
@@ -91,17 +91,20 @@ def prototypical_loss(input, target, n_support):
     #target_inds = target_inds.view(1, n_query)
     #target_inds = target_inds.expand(n_classes, n_query).long()
     #target_inds = target_inds.eq()
-    _, y_hat = log_p_y.max(0)
-    target_inds = torch.zeros(len(target_cpu),n_classes).long()
+    _, y_hat = log_p_y.max(2)
+    target_inds = torch.arange(0, n_classes).view(n_classes, 1, 1).expand(n_classes, n_query, 1).long()
+    target_inds = Variable(target_inds, requires_grad=False)
+    #target_inds = torch.zeros(len(target_cpu),n_classes).long()
     
-    target_inds = target_inds.scatter_(dim=1, index=target_cpu.unsqueeze(1).long(), src=torch.ones(len(target_cpu), n_classes).long())
-    target_inds = target_inds.transpose(0,1)
+    #target_inds = target_inds.scatter_(dim=1, index=target_cpu.unsqueeze(1).long(), src=torch.ones(len(target_cpu), n_classes).long())
+    #target_inds = target_inds.transpose(0,1)
     #print(target_inds.size())
     #print(log_p_y.type())
     #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
 
-    loss_val = torch.masked_select(dists.transpose(0,1),target_inds.bool()).mean() -log_p_y.squeeze().view(-1).mean()
+    #loss_val = -torch.masked_select(log_p_y.squeeze().transpose(0,1),target_inds.byte()).mean() -log_p_y.squeeze().view(-1).mean()
     
-    acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
+    loss_val = -log_p_y.gather(0, target_inds).squeeze().view(-1).mean()
+    acc_val = y_hat.eq(target_inds.squeeze()).float().mean()
 
     return loss_val,  acc_val
