@@ -76,7 +76,8 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
         prototypes = torch.cat([old_prototypes,n_prototypes],dim=0)
     else:
         prototypes = n_prototypes
-    n_classes = len(prototypes)
+    n_classes = prototypes.size()[0]
+    print(n_classes)
     # FIXME when torch will support where as np
     #print(n_support)
     #print(target_cpu)
