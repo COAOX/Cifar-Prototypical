@@ -206,22 +206,22 @@ def train(opt, model, optim, lr_scheduler):
                 best_acc = avg_acc
                 best_state = model.state_dict()
 
-        torch.save(model.state_dict(), last_model_path)
+    torch.save(model.state_dict(), last_model_path)
 
-        for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
-            save_list_to_file(os.path.join(opt.experiment_root,
-                                       name + '.txt'), locals()[name])
+    for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
+        save_list_to_file(os.path.join(opt.experiment_root,
+                                   name + '.txt'), locals()[name])
 
-        print('Testing with last model..')
-        test(opt=options,
-            test_dataloader=test_data,
-             model=model)
+    print('Testing with last model..')
+    test(opt=options,
+        test_dataloader=test_data,
+         model=model)
 
-        model.load_state_dict(best_state)
-        print('Testing with best model..')
-        test(opt=options,
-             test_dataloader=test_data,
-             model=model)
+    model.load_state_dict(best_state)
+    print('Testing with best model..')
+    test(opt=options,
+         test_dataloader=test_data,
+         model=model)
 
 
 def test(opt, test_dataloader, model):
