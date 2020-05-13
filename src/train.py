@@ -94,6 +94,26 @@ def save_list_to_file(path, thelist):
         for item in thelist:
             f.write("%s\n" % item)
 
+def test(opt, test_dataloader, model, prototypes):
+    '''
+    Test the model trained with the prototypical learning algorithm
+    '''
+    
+
+    device = 'cuda:0' if torch.cuda.is_available() and opt.cuda else 'cpu'
+    avg_acc = list()
+    for epoch in range(10):
+        test_iter = iter(test_dataloader)
+        for i, (x, y) in enumerate(tqdm(tr_dataloader)):
+            x, y = x.to(device), y.squeeze(-1).to(device)
+            model_output = model(x)
+            _, acc, _ = loss_fn(model_output, target=y,
+                             n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=None)
+            avg_acc.append(acc.item())
+    avg_acc = np.mean(avg_acc)
+    print('Test Acc: {}'.format(avg_acc))
+
+    return avg_acc
 
 def train(opt, model, optim, lr_scheduler):
     '''
@@ -230,26 +250,6 @@ def train(opt, model, optim, lr_scheduler):
                                    name + '.txt'), locals()[name])
 
 
-def test(opt, test_dataloader, model, prototypes):
-    '''
-    Test the model trained with the prototypical learning algorithm
-    '''
-    
-
-    device = 'cuda:0' if torch.cuda.is_available() and opt.cuda else 'cpu'
-    avg_acc = list()
-    for epoch in range(10):
-        test_iter = iter(test_dataloader)
-        for i, (x, y) in enumerate(tqdm(tr_dataloader)):
-            x, y = x.to(device), y.squeeze(-1).to(device)
-            model_output = model(x)
-            _, acc, _ = loss_fn(model_output, target=y,
-                             n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=None)
-            avg_acc.append(acc.item())
-    avg_acc = np.mean(avg_acc)
-    print('Test Acc: {}'.format(avg_acc))
-
-    return avg_acc
 
 
 def eval(opt):
