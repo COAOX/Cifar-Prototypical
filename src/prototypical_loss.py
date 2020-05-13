@@ -20,15 +20,14 @@ def euclidean_dist(x, y):
     '''
     Compute euclidean distance between two tensors
     '''
-    # x: N x D
-    # y: M x D
+    # x: N_query(n) x D
+    # y: N_Classes(m) x D
     n = x.size(0)
     m = y.size(0)
     d = x.size(1)
     #print("n:{},m:{},d:{},ysize:{}".format(n,m,d,y.size(1)))
     if d != y.size(1):
         raise Exception
-
     x = x.unsqueeze(1).expand(n, m, d)
     y = y.unsqueeze(0).expand(n, m, d)
 
@@ -84,29 +83,32 @@ def prototypical_loss(input, target, n_support):
     #print(prototypes.size())
     n_query = len(query_idxs)
     dists = euclidean_dist(input_cpu, prototypes)
-    #print(dists)
-    log_p_y = F.log_softmax(-dists, dim=1).view(n_classes, n_query, -1)
+    log_p_y = F.log_softmax(-dists, dim=1).view(n_query, n_classes, -1)
     #print(log_p_y)
     #target_inds = torch.arange(0, n_query)
     #target_inds = target_inds.view(1, n_query)
     #target_inds = target_inds.expand(n_classes, n_query).long()
     #target_inds = target_inds.eq()
-    _, y_hat = log_p_y.max(2)
-    target_inds = torch.arange(0, n_classes).view(n_classes, 1, 1).expand(n_classes, n_query, 1).long()
-    target_inds = Variable(target_inds, requires_grad=False)
-    #target_inds = torch.zeros(len(target_cpu),n_classes).long()
+    #print(dists)
+    _, y_hat = log_p_y.max(1)
+    #print(y_hat)
+    #target_inds = torch.arange(0, n_classes).view(n_classes, 1, 1).expand(n_classes, n_query, 1).long()
+    #target_inds = Variable(target_inds, requires_grad=False)
+    target_inds = torch.zeros(len(target_cpu),n_classes).long()
     
-    #target_inds = target_inds.scatter_(dim=1, index=target_cpu.unsqueeze(1).long(), src=torch.ones(len(target_cpu), n_classes).long())
+    target_inds = target_inds.scatter_(dim=1, index=target_cpu.unsqueeze(1).long(), src=torch.ones(len(target_cpu), n_classes).long())
     #target_inds = target_inds.transpose(0,1)
     #print(target_inds.size())
     #print(log_p_y.type())
     #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
 
-    #loss_val = -torch.masked_select(log_p_y.squeeze().transpose(0,1),target_inds.byte()).mean() -log_p_y.squeeze().view(-1).mean()
-    print(log_p_y)
-    print(y_hat)
-    print(target_inds)
-    loss_val = -log_p_y.gather(0, target_inds).squeeze().view(-1).mean()
+    loss_val = torch.masked_select(dists,target_inds.byte()).mean() +log_p_y.squeeze().view(-1).mean()
+    #print(log_p_y.size())
+    #print(log_p_y)
+
+    #print(y_hat)
+    #print(target_inds)
+    #loss_val = -log_p_y.gather(1, target_inds).squeeze().view(-1).mean()
     acc_val = y_hat.eq(target_inds.squeeze()).float().mean()
 
     return loss_val,  acc_val
