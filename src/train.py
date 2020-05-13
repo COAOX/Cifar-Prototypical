@@ -162,10 +162,15 @@ def train(opt, model, optim, lr_scheduler):
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
             model.train()
+            train_acc.clear()
+            train_loss.clear()
             for i, (x, y) in enumerate(tqdm(tr_dataloader)):
                 optim.zero_grad()
-                x, y = x.to(device), y.view(-1).to(device)
+                #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
+                x, y = x.to(device), y.squeeze().to(device)
+
                 model_output = model(x)
+                #print(model_output.size())
                 #print("#######model_output:{}".format(model_output.size()))
                 loss, acc = loss_fn(model_output, target=y,
                                     n_support=opt.num_support_tr)
@@ -173,22 +178,25 @@ def train(opt, model, optim, lr_scheduler):
                 optim.step()
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
-            avg_loss = np.mean(train_loss[-opt.iterations:])
-            avg_acc = np.mean(train_acc[-opt.iterations:])
+            avg_loss = np.mean(train_loss)
+            avg_acc = np.mean(train_acc)
             print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
             lr_scheduler.step()
+
             #if val_dataloader is None:
                 #continue
             model.eval()
+            val_acc.clear()
+            val_loss.clear()
             for i, (x, y) in enumerate(tqdm(val_dataloader)):
-                x, y = x.to(device), y.view(-1).to(device)
+                x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
                 loss, acc = loss_fn(model_output, target=y,
                                     n_support=opt.num_support_val)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())
-            avg_loss = np.mean(val_loss[-opt.iterations:])
-            avg_acc = np.mean(val_acc[-opt.iterations:])
+            avg_loss = np.mean(val_loss)
+            avg_acc = np.mean(val_acc)
             postfix = ' (Best)' if avg_acc >= best_acc else ' (Best: {})'.format(
                 best_acc)
             print('Avg Val Loss: {}, Avg Val Acc: {}{}'.format(
@@ -227,7 +235,7 @@ def test(opt, test_dataloader, model):
     for epoch in range(10):
         test_iter = iter(test_dataloader)
         for i, (x, y) in enumerate(tqdm(tr_dataloader)):
-            x, y = x.to(device), y.view(-1).to(device)
+            x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
             _, acc = loss_fn(model_output, target=y,
                              n_support=opt.num_support_val)

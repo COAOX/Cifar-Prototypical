@@ -74,16 +74,17 @@ def prototypical_loss(input, target, n_support):
     #for x in classes:
         #print("{}:{}".format(x,target_cpu.eq(x).nonzero()))
     #print(list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:], classes)))
-    query_idlist = list(map(lambda c: target_cpu.eq(c).nonzero(), classes))
-    query_idxs = torch.cat(query_idlist).view(-1)
+    #query_idlist = list(map(lambda c: target_cpu.eq(c).nonzero(), classes))
+    #query_idxs = torch.cat(query_idlist).view(-1)
     #print(query_idxs)
     #query_samples = torch.stack([input_cpu[query_lists] for query_lists in query_idxs])
-    query_samples = input_cpu[query_idxs]
+    #query_samples = input_cpu[query_idxs]
     #print(query_samples.size())
     #print(prototypes.size())
-    n_query = len(query_idxs)
+    n_query = len(input_cpu)
     dists = euclidean_dist(input_cpu, prototypes)
-    log_p_y = F.log_softmax(-dists, dim=1).view(n_query, n_classes, -1)
+    #print(F.log_softmax(-dists, dim=1).size())
+    log_p_y = F.log_softmax(-dists, dim=1)
     #print(log_p_y)
     #target_inds = torch.arange(0, n_query)
     #target_inds = target_inds.view(1, n_query)
@@ -92,6 +93,8 @@ def prototypical_loss(input, target, n_support):
     #print(dists)
     _, y_hat = log_p_y.max(1)
     #print(y_hat)
+    #print(target_cpu)
+    #print( y_hat.eq(target_cpu.squeeze()).float().mean())
     #target_inds = torch.arange(0, n_classes).view(n_classes, 1, 1).expand(n_classes, n_query, 1).long()
     #target_inds = Variable(target_inds, requires_grad=False)
     target_inds = torch.zeros(len(target_cpu),n_classes).long()
@@ -102,13 +105,13 @@ def prototypical_loss(input, target, n_support):
     #print(log_p_y.type())
     #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
 
-    loss_val = torch.masked_select(dists,target_inds.byte()).mean() +log_p_y.squeeze().view(-1).mean()
+    loss_val = -torch.masked_select(log_p_y,target_inds.byte()).sum() #+log_p_y.squeeze().view(-1).mean()
     #print(log_p_y.size())
     #print(log_p_y)
 
     #print(y_hat)
     #print(target_inds)
     #loss_val = -log_p_y.gather(1, target_inds).squeeze().view(-1).mean()
-    acc_val = y_hat.eq(target_inds.squeeze()).float().mean()
+    acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
 
     return loss_val,  acc_val
