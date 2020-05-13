@@ -118,7 +118,7 @@ def train(opt, model, optim, lr_scheduler):
     '''
     Train the model with the prototypical learning algorithm
     '''
-
+    torch.autograd.set_detect_anomaly(True)
     input_transform= Compose([
                     transforms.RandomHorizontalFlip(),
                     transforms.RandomCrop(32,padding=4),
