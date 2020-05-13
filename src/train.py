@@ -94,7 +94,7 @@ def save_list_to_file(path, thelist):
         for item in thelist:
             f.write("%s\n" % item)
 
-def test(opt, test_dataloader, model, prototypes):
+def testf(opt, test_dataloader, model, prototypes):
     '''
     Test the model trained with the prototypical learning algorithm
     '''
@@ -180,6 +180,7 @@ def train(opt, model, optim, lr_scheduler):
         test_data = DataLoader(BatchData(test_xs, test_ys, input_transform_eval),
                     batch_size=opt.batch_size, shuffle=False)
 
+
         for epoch in range(opt.epochs):
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
@@ -234,15 +235,15 @@ def train(opt, model, optim, lr_scheduler):
         else:
             prototypes = prototype
         print('Testing with last model..')
-        test(opt=opt,
+        testf(opt=opt,
             test_dataloader=test_data,
-             model=model, prototypes = prototypes)
+             model=model, prototypes=prototypes)
 
         model.load_state_dict(best_state)
         print('Testing with best model..')
-        test(opt=opt,
+        testf(opt=opt,
              test_dataloader=test_data,
-             model=model, prototypes = prototypes)
+             model=model, prototypes=prototypes)
     torch.save(model.state_dict(), last_model_path)
 
     for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
@@ -267,7 +268,7 @@ def eval(opt):
     model_path = os.path.join(opt.experiment_root, 'best_model.pth')
     model.load_state_dict(torch.load(model_path))
 
-    test(opt=options,
+    testf(opt=options,
          test_dataloader=test_dataloader,
          model=model)
 
@@ -294,20 +295,11 @@ def main():
     model = init_protonet(options)
     optim = init_optim(options, model)
     lr_scheduler = init_lr_scheduler(options, optim)
-    res = train(opt=options,
+    train(opt=options,
                 model=model,
                 optim=optim,
                 lr_scheduler=lr_scheduler)
-    best_state, best_acc, train_loss, train_acc, val_loss, val_acc = res
-    print('Testing with last model..')
-    test(opt=options,
-         model=model)
 
-    model.load_state_dict(best_state)
-    print('Testing with best model..')
-    test(opt=options,
-         test_dataloader=test_dataloader,
-         model=model)
 
     # optim = init_optim(options, model)
     # lr_scheduler = init_lr_scheduler(options, optim)
