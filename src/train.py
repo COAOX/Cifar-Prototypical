@@ -213,13 +213,13 @@ def train(opt, model, optim, lr_scheduler):
                                    name + '.txt'), locals()[name])
 
     print('Testing with last model..')
-    test(opt=options,
+    test(opt=opt,
         test_dataloader=test_data,
          model=model)
 
     model.load_state_dict(best_state)
     print('Testing with best model..')
-    test(opt=options,
+    test(opt=opt,
          test_dataloader=test_data,
          model=model)
 
