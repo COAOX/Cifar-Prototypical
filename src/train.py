@@ -164,6 +164,7 @@ def train(opt, model, optim, lr_scheduler):
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
             model.train()
+            print("######train#######")
             train_acc.clear()
             train_loss.clear()
             for i, (x, y) in enumerate(tqdm(tr_dataloader)):
@@ -176,14 +177,12 @@ def train(opt, model, optim, lr_scheduler):
                 #print("#######model_output:{}".format(model_output.size()))
                 loss, acc, prototype = loss_fn(model_output, target=y,
                                     n_support=opt.num_support_tr, opt=opt, old_prototypes=prototypes,inc_i=inc_i)
+                
                 loss.backward()
                 optim.step()
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
-            if not prototypes is None:
-                prototypes = torch.cat([prototypes,prototype],dim=0)
-            else:
-                prototypes = prototype
+
             avg_loss = np.mean(train_loss)
             avg_acc = np.mean(train_acc)
             print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
@@ -211,13 +210,10 @@ def train(opt, model, optim, lr_scheduler):
                 torch.save(model.state_dict(), best_model_path)
                 best_acc = avg_acc
                 best_state = model.state_dict()
-
-        torch.save(model.state_dict(), last_model_path)
-
-        for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
-            save_list_to_file(os.path.join(opt.experiment_root,
-                                       name + '.txt'), locals()[name])
-
+        if not prototypes is None:
+            prototypes = torch.cat([prototypes,prototype],dim=0)
+        else:
+            prototypes = prototype
         print('Testing with last model..')
         test(opt=opt,
             test_dataloader=test_data,
@@ -228,6 +224,11 @@ def train(opt, model, optim, lr_scheduler):
         test(opt=opt,
              test_dataloader=test_data,
              model=model)
+    torch.save(model.state_dict(), last_model_path)
+
+    for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
+        save_list_to_file(os.path.join(opt.experiment_root,
+                                   name + '.txt'), locals()[name])
 
 
 def test(opt, test_dataloader, model, prototypes):

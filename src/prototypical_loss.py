@@ -66,18 +66,23 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #n_query = target_cpu.eq(classes[0].item()).sum().item() - n_support
 
     support_idxs = list(map(supp_idxs, classes))
-
+    #if not old_prototypes is None:
+    #    print(old_prototypes.size()[0])
+    #print((inc_i+1)*opt.class_per_stage)
     n_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
     if old_prototypes is None:
         prototypes = n_prototypes
-    elif inc_i is None or len(old_prototypes)>=(inc_i+1)*opt.class_per_stage:
+    elif inc_i is None or old_prototypes.size()[0]>=(inc_i+1)*opt.class_per_stage:
         prototypes = old_prototypes
     elif not old_prototypes is None:
         prototypes = torch.cat([old_prototypes,n_prototypes],dim=0)
     else:
         prototypes = n_prototypes
+    #print(old_prototypes)
+    #print("loss prototypes:{}".format(prototypes))
+    #print(prototypes.size())
     n_classes = prototypes.size()[0]
-    print(n_classes)
+    #print(n_classes)
     # FIXME when torch will support where as np
     #print(n_support)
     #print(target_cpu)
