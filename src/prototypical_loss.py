@@ -68,7 +68,9 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     support_idxs = list(map(supp_idxs, classes))
 
     n_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
-    if inc_i is None or len(old_prototypes)>=(inc_i+1)*opt.class_per_stage:
+    if old_prototypes is None:
+        prototypes = n_prototypes
+    elif inc_i is None or len(old_prototypes)>=(inc_i+1)*opt.class_per_stage:
         prototypes = old_prototypes
     elif not old_prototypes is None:
         prototypes = torch.cat([old_prototypes,n_prototypes],dim=0)
