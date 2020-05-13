@@ -175,7 +175,7 @@ def train(opt, model, optim, lr_scheduler):
                 #print(model_output.size())
                 #print("#######model_output:{}".format(model_output.size()))
                 loss, acc, prototype = loss_fn(model_output, target=y,
-                                    n_support=opt.num_support_tr, opt, prototypes,inc_i)
+                                    n_support=opt.num_support_tr, opt=opt, old_prototypes=prototypes,inc_i=inc_i)
                 loss.backward()
                 optim.step()
                 train_loss.append(loss.item())
@@ -198,7 +198,7 @@ def train(opt, model, optim, lr_scheduler):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
                 loss, acc, prototype = loss_fn(model_output, target=y,
-                                    n_support=opt.num_support_val, opt, prototypes, inc_i)
+                                    n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=inc_i)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
@@ -244,7 +244,7 @@ def test(opt, test_dataloader, model, prototypes):
             x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
             _, acc, _ = loss_fn(model_output, target=y,
-                             n_support=opt.num_support_val, opt, prototypes, None)
+                             n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=None)
             avg_acc.append(acc.item())
     avg_acc = np.mean(avg_acc)
     print('Test Acc: {}'.format(avg_acc))
