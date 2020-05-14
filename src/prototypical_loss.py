@@ -119,10 +119,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #print(target_inds.size())
     #print(log_p_y.type())
     #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
-    if inc_i = 1:
-        print("log_p_y size:{}".format(log_p_y.size()))
-        print(y_hat)
-        print(target_inds)
+    
     loss_val = -torch.masked_select(log_p_y,target_inds.bool()).sum() #+log_p_y.squeeze().view(-1).mean()
     #print(log_p_y.size())
     #print(log_p_y)
@@ -131,5 +128,9 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #print(target_inds)
     #loss_val = -log_p_y.gather(1, target_inds).squeeze().view(-1).mean()
     acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
-
+    if inc_i == 1:
+        print("log_p_y size:{}".format(log_p_y.size()))
+        print(y_hat)
+        print(target_inds)
+        print(id(loss_val))
     return loss_val,  acc_val, n_prototypes

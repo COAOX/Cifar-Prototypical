@@ -190,6 +190,7 @@ def train(opt, model, optim, lr_scheduler):
             train_loss.clear()
             for i, (x, y) in enumerate(tqdm(tr_dataloader)):
                 optim.zero_grad()
+                print("---------{}---------".format(i))
                 #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
                 x, y = x.to(device), y.squeeze().to(device)
 
@@ -197,7 +198,7 @@ def train(opt, model, optim, lr_scheduler):
                 #print(model_output.size())
                 #print("#######model_output:{}".format(model_output.size()))
                 loss, acc, prototype = loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=prototypes,inc_i=inc_i)
-                
+                print(loss)
                 loss.backward()
                 optim.step()
                 train_loss.append(loss.item())
@@ -230,15 +231,14 @@ def train(opt, model, optim, lr_scheduler):
                 torch.save(model.state_dict(), best_model_path)
                 best_acc = avg_acc
                 best_state = model.state_dict()
+
         if not prototypes is None:
             prototypes = torch.cat([prototypes,copy.deepcopy(prototype)],dim=0)
         else:
             prototypes = prototype
 
         print('Testing with last model..')
-        testf(opt=opt,
-            test_dataloader=test_data,
-             model=model, prototypes=prototypes)
+        #testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
 
     model.load_state_dict(best_state)
     print('Testing with best model..')
