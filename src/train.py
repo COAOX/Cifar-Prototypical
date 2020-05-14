@@ -243,12 +243,12 @@ def train(opt, model, optim, lr_scheduler):
         
 
         if not prototypes[inc_i] is None:
-            prototypes.extend(torch.cat([prototypes[inc_i],prototype.clone()],dim=0))
+            prototypes.extend(torch.cat([prototypes[inc_i],prototype],dim=0))
         else:
-            prototypes.extend(prototype.clone())
+            prototypes.extend(prototype)
 
-        print(prototype)
-        print(prototypes[-1])
+        print(prototype.size())
+        print(prototypes[-1].size())
         print('Testing with last model..')
         #testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
 
