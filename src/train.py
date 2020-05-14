@@ -242,10 +242,10 @@ def train(opt, model, optim, lr_scheduler):
 
         
 
-        if not prototypes is None:
-            prototypes = torch.cat([prototypes,prototype.clone()],dim=0)
-        else:
-            prototypes = prototype.clone()
+#        if not prototypes is None:
+#            prototypes = torch.cat([prototypes,prototype.clone()],dim=0)
+#        else:
+#            prototypes = prototype.clone()
 
         print('Testing with last model..')
         #testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
