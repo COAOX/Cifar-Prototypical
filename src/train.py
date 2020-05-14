@@ -190,7 +190,7 @@ def train(opt, model, optim, lr_scheduler):
         test_data = DataLoader(BatchData(test_xs, test_ys, input_transform_eval),
                     batch_size=opt.batch_size, shuffle=False)
 
-
+        pp = None
         for epoch in range(opt.epochs):
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
@@ -200,25 +200,24 @@ def train(opt, model, optim, lr_scheduler):
             train_loss.clear()
             #optim.zero_grad()
             
-            with torch.autograd.set_detect_anomaly(True):
-                for i, (x, y) in enumerate(tqdm(tr_dataloader)):
-                    optim.zero_grad()
-                    print("x:{},y:{}".format(x.size(),y.squeeze().size()))
-                    x, y = x.to(device), y.squeeze().to(device)
+            for i, (x, y) in enumerate(tqdm(tr_dataloader)):
+                optim.zero_grad()
+                print("x:{},y:{}".format(x.size(),y.squeeze().size()))
+                x, y = x.to(device), y.squeeze().to(device)
 
-                    model_output = model(x)
-                    #print(model_output.size())
-                    #print("#######model_output:{}".format(model_output.size()))
+                model_output = model(x)
+                #print(model_output.size())
+                #print("#######model_output:{}".format(model_output.size()))
 
-                    loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
+                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
 
-                    if i == len(tr_dataloader):
-                        pp = compute_prototype(model_output.clone(),y,opt.num_support_tr)
-                    loss.backward()
-                    print("######next####")
-                    optim.step()
-                    train_loss.append(loss.item())
-                    train_acc.append(acc.item())
+                if i == len(tr_dataloader):
+                    pp = compute_prototype(model_output.clone(),y,opt.num_support_tr)
+                loss.backward()
+                print("######next####")
+                optim.step()
+                train_loss.append(loss.item())
+                train_acc.append(acc.item())
             avg_loss = np.mean(train_loss)
             avg_acc = np.mean(train_acc)
             print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
