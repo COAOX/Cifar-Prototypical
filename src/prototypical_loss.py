@@ -78,7 +78,8 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
         prototypes = torch.cat([old_prototypes,n_prototypes.clone()],dim=0)
     else:
         prototypes = n_prototypes.clone()
-    print(old_prototypes.size())
+    if not old_prototypes is None:
+        print(old_prototypes.size())
     print(protonets.size())
     #print("loss prototypes:{}".format(prototypes))
 
