@@ -217,6 +217,8 @@ def train(opt, model, optim, lr_scheduler):
             for i, (x, y) in enumerate(tqdm(val_dataloader)):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
+                if inc_i == 1:
+                    print("{}:{}".format(id(prototypes),id(prototypes.clone())))
                 loss, acc, prototype = loss_fn(model_output, target=y,
                                     n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=inc_i)
                 val_loss.append(loss.item())
@@ -233,7 +235,7 @@ def train(opt, model, optim, lr_scheduler):
                 best_state = model.state_dict()
 
         if not prototypes is None:
-            prototypes = torch.cat([prototypes,copy.deepcopy(prototype)],dim=0)
+            prototypes = torch.cat([prototypes,prototype.clone()],dim=0)
         else:
             prototypes = prototype
 
