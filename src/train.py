@@ -188,8 +188,9 @@ def train(opt, model, optim, lr_scheduler):
             print("######train#######")
             train_acc.clear()
             train_loss.clear()
+            optim.zero_grad()
             for i, (x, y) in enumerate(tqdm(tr_dataloader)):
-                optim.zero_grad()
+                
                 print("---------{}---------".format(i))
                 #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
                 x, y = x.to(device), y.squeeze().to(device)
