@@ -150,7 +150,7 @@ def train(opt, model, optim, lr_scheduler):
     train_xs = []
     train_ys = []
     test_accs = []
-    prototypes = torch.ones([20,256])
+    prototypes = None
 
     for inc_i in range(opt.stage):
         print(f"Incremental num : {inc_i}")
@@ -243,10 +243,11 @@ def train(opt, model, optim, lr_scheduler):
                 best_state = model.state_dict()
 
 
-#        if not prototypes is None:
-#            prototypes = torch.cat([prototypes,prototype.clone()],dim=0)
-#        else:
-#            prototypes = prototype.clone()
+        if not prototypes is None:
+            prototypes = torch.cat([prototypes,prototype.clone()],dim=0)
+        else:
+            prototypes = torch.ones([20,256])
+            #prototypes = prototype.clone()
 
         print('Testing with last model..')
         #testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
