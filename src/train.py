@@ -108,7 +108,7 @@ def testf(opt, test_dataloader, model, prototypes):
             x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
             _, acc, _ = loss_fn(model_output, target=y,
-                             n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes[opt.stage-1],inc_i=None)
+                             n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=None)
             avg_acc.append(acc.item())
     avg_acc = np.mean(avg_acc)
     print('Test Acc: {}'.format(avg_acc))
@@ -150,7 +150,7 @@ def train(opt, model, optim, lr_scheduler):
     train_xs = []
     train_ys = []
     test_accs = []
-    prototypes = []
+    prototypes = None
 
     for inc_i in range(opt.stage):
         print(f"Incremental num : {inc_i}")
@@ -192,15 +192,15 @@ def train(opt, model, optim, lr_scheduler):
             with torch.autograd.set_detect_anomaly(True):
                 for i, (x, y) in enumerate(tqdm(tr_dataloader)):
                     optim.zero_grad()
-                    #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
+                    print("x:{},y:{}".format(x.size(),y.squeeze().size()))
                     x, y = x.to(device), y.squeeze().to(device)
 
                     model_output = model(x)
                     #print(model_output.size())
                     #print("#######model_output:{}".format(model_output.size()))
-                    #print(model_output)
-                    loss, acc, prototype = loss_fn(model_output.clone(), target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if inc_i==0 else prototypes[inc_i-1],inc_i=inc_i)
-                    #print(model_output)
+                    print(model_output)
+                    loss, acc, prototype = loss_fn(model_output.clone(), target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.clone(),inc_i=inc_i)
+                    print(model_output)
                     if i == len(tr_dataloader):
                         loss.backward()
                     else:
@@ -223,10 +223,10 @@ def train(opt, model, optim, lr_scheduler):
             for i, (x, y) in enumerate(tqdm(val_dataloader)):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
-                #if inc_i == 1:
-                #    print("{}:{}".format(id(prototypes),id(prototypes.clone())))
+                if inc_i == 1:
+                    print("{}:{}".format(id(prototypes),id(prototypes.clone())))
                 loss, acc, prototype = loss_fn(model_output, target=y,
-                                    n_support=opt.num_support_val, opt=opt, old_prototypes=None if inc_i==0 else prototypes[inc_i-1],inc_i=inc_i)
+                                    n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=inc_i)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
@@ -241,15 +241,13 @@ def train(opt, model, optim, lr_scheduler):
                 best_state = model.state_dict()
 
         
-
-        if inc_i==0:
-            prototypes.extend(prototype)
+        print(prototype)
+        print(prototype.clone())
+        if not prototypes is None:
+            prototypes = torch.cat([prototypes,prototype.clone()],dim=0)
         else:
-            prototypes.extend(torch.cat([prototypes[inc_i-1],prototype],dim=0))
-        
-            
-        print(prototype.size())
-        print(prototypes[-1].size())
+            prototypes = prototype.clone()
+
         print('Testing with last model..')
         #testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
 
