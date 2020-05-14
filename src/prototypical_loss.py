@@ -80,7 +80,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
         prototypes = n_prototypes.clone()
     if not old_prototypes is None:
         print(old_prototypes.size())
-    print(protonets.size())
+    print(prototypes.size())
     #print("loss prototypes:{}".format(prototypes))
 
     n_classes = prototypes.size()[0]
