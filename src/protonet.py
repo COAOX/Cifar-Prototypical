@@ -18,11 +18,11 @@ class ProtoNet(nn.Module):
     Model as described in the reference paper,
     source: https://github.com/jakesnell/prototypical-networks/blob/f0c48808e496989d01db59f86d4449d7aee9ab0c/protonets/models/few_shot.py#L62-L84
     '''
-    def __init__(self, x_dim=3, hid_dim=64, z_dim=64):
+    def __init__(self, x_dim=3, hid_dim=64, z_dim=32):
         super(ProtoNet, self).__init__()
         self.encoder = nn.Sequential(
-            conv_block(x_dim, (int)(hid_dim/2)),
-            conv_block((int)(hid_dim/2), hid_dim),
+            conv_block(x_dim, hid_dim),
+            conv_block(hid_dim, hid_dim),
             conv_block(hid_dim, hid_dim),
             #conv_block(hid_dim, hid_dim),
             conv_block(hid_dim, z_dim),
