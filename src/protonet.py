@@ -31,4 +31,4 @@ class ProtoNet(nn.Module):
     def forward(self, x):
         with torch.autograd.set_detect_anomaly(True):
             x = self.encoder(x)
-        return x.clone().view(x.size(0), -1)
+        return x.view(x.size(0), -1)

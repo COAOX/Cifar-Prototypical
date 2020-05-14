@@ -192,7 +192,6 @@ def train(opt, model, optim, lr_scheduler):
             with torch.autograd.set_detect_anomaly(True):
                 for i, (x, y) in enumerate(tqdm(tr_dataloader)):
                     optim.zero_grad()
-                    print("---------{}---------".format(i))
                     #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
                     x, y = x.to(device), y.squeeze().to(device)
 
@@ -202,7 +201,7 @@ def train(opt, model, optim, lr_scheduler):
                     if not prototypes is None:
                         print(prototypes)
                     loss, acc, prototype = loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.clone(),inc_i=inc_i)
-                    
+                    print(loss)
                     if i == len(tr_dataloader):
                         loss.backward()
                     else:
