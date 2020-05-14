@@ -198,7 +198,7 @@ def train(opt, model, optim, lr_scheduler):
                 #print(model_output.size())
                 #print("#######model_output:{}".format(model_output.size()))
                 loss, acc, prototype = loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=prototypes,inc_i=inc_i)
-                print(loss)
+                print(id(loss))
                 loss.backward()
                 optim.step()
                 train_loss.append(loss.item())
