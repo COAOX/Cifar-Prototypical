@@ -52,7 +52,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     '''
     target_cpu = target.to('cpu')
     input_cpu = input.to('cpu')
-
+    old_prototypes=None
     def supp_idxs(c):
         # FIXME when torch will support where as np
         return target_cpu.eq(c).nonzero()[:n_support].squeeze(1)
@@ -114,7 +114,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #target_inds = Variable(target_inds, requires_grad=False)
     target_inds = torch.zeros(len(target_cpu),n_classes).long()
     
-    target_inds = target_inds.scatter_(dim=1, index=target_cpu.unsqueeze(1).long(), src=torch.ones(len(target_cpu), n_classes).long())
+    target_inds = target_inds.scatter_(dim=1, index=(target_cpu-inc_i*20).unsqueeze(1).long(), src=torch.ones(len(target_cpu), n_classes).long())
     #target_inds = target_inds.transpose(0,1)
     #print(target_inds.size())
     #print(log_p_y.type())
