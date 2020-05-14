@@ -107,13 +107,23 @@ def testf(opt, test_dataloader, model, prototypes):
         for i, (x, y) in enumerate(tqdm(test_dataloader)):
             x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
-            _, acc, _ = loss_fn(model_output, target=y,
+            _, acc= loss_fn(model_output, target=y,
                              n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=None)
             avg_acc.append(acc.item())
     avg_acc = np.mean(avg_acc)
     print('Test Acc: {}'.format(avg_acc))
 
     return avg_acc
+
+def compute_prototype(input,target,n_support):
+    input.to('cpu')
+    def supp_idxs(c):
+        # FIXME when torch will support where as np
+        return target_cpu.eq(c).nonzero()[:n_support].squeeze(1)
+    support_idxs = list(map(supp_idxs, classes))
+    return torch.stack([input_cpu.clone()[idx_list].mean(0) for idx_list in support_idxs])
+
+
 
 def train(opt, model, optim, lr_scheduler):
     '''
@@ -200,17 +210,15 @@ def train(opt, model, optim, lr_scheduler):
                     #print(model_output.size())
                     #print("#######model_output:{}".format(model_output.size()))
 
-                    loss, acc, prototype = loss_fn(model_output.clone(), target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
+                    loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
 
                     if i == len(tr_dataloader):
-                        loss.backward()
-                    else:
-                        loss.backward(retain_graph=True)
+                        pp = compute_prototype(model_output.clone(),y,opt.num_support_tr)
+                    loss.backward()
                     print("######next####")
                     optim.step()
                     train_loss.append(loss.item())
                     train_acc.append(acc.item())
-                pp = prototype.clone()
             avg_loss = np.mean(train_loss)
             avg_acc = np.mean(train_acc)
             print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
@@ -224,7 +232,7 @@ def train(opt, model, optim, lr_scheduler):
             for i, (x, y) in enumerate(tqdm(val_dataloader)):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
-                loss, acc, _ = loss_fn(model_output, target=y,
+                loss, acc= loss_fn(model_output, target=y,
                                     n_support=opt.num_support_val, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())

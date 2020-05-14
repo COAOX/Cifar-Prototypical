@@ -129,4 +129,4 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #loss_val = -log_p_y.gather(1, target_inds).squeeze().view(-1).mean()
     acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
 
-    return loss_val,  acc_val, n_prototypes
+    return loss_val,  acc_val
