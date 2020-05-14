@@ -200,7 +200,7 @@ def train(opt, model, optim, lr_scheduler):
                     #print(model_output.size())
                     #print("#######model_output:{}".format(model_output.size()))
 
-                    loss, acc, prototype = loss_fn(model_output.clone(), target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=pp,inc_i=inc_i)
+                    loss, acc, prototype = loss_fn(model_output.clone(), target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
 
                     if i == len(tr_dataloader):
                         loss.backward()
@@ -225,7 +225,7 @@ def train(opt, model, optim, lr_scheduler):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
                 loss, acc, _ = loss_fn(model_output, target=y,
-                                    n_support=opt.num_support_val, opt=opt, old_prototypes=pp,inc_i=inc_i)
+                                    n_support=opt.num_support_val, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
