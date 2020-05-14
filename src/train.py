@@ -150,7 +150,7 @@ def train(opt, model, optim, lr_scheduler):
     train_xs = []
     train_ys = []
     test_accs = []
-    prototypes = [None]
+    prototypes = []
 
     for inc_i in range(opt.stage):
         print(f"Incremental num : {inc_i}")
@@ -199,7 +199,7 @@ def train(opt, model, optim, lr_scheduler):
                     #print(model_output.size())
                     #print("#######model_output:{}".format(model_output.size()))
                     #print(model_output)
-                    loss, acc, prototype = loss_fn(model_output.clone(), target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=prototypes[inc_i],inc_i=inc_i)
+                    loss, acc, prototype = loss_fn(model_output.clone(), target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if inc_i==0 else prototypes[inc_i-1],inc_i=inc_i)
                     #print(model_output)
                     if i == len(tr_dataloader):
                         loss.backward()
@@ -226,7 +226,7 @@ def train(opt, model, optim, lr_scheduler):
                 #if inc_i == 1:
                 #    print("{}:{}".format(id(prototypes),id(prototypes.clone())))
                 loss, acc, prototype = loss_fn(model_output, target=y,
-                                    n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes[inc_i],inc_i=inc_i)
+                                    n_support=opt.num_support_val, opt=opt, old_prototypes=None if inc_i==0 else prototypes[inc_i-1],inc_i=inc_i)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
@@ -242,11 +242,12 @@ def train(opt, model, optim, lr_scheduler):
 
         
 
-        if not prototypes[inc_i] is None:
-            prototypes.extend(torch.cat([prototypes[inc_i],prototype],dim=0))
-        else:
+        if inc_i==0:
             prototypes.extend(prototype)
-
+        else:
+            prototypes.extend(torch.cat([prototypes[inc_i-1],prototype],dim=0))
+        
+            
         print(prototype.size())
         print(prototypes[-1].size())
         print('Testing with last model..')
