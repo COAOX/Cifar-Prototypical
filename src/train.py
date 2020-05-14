@@ -200,7 +200,10 @@ def train(opt, model, optim, lr_scheduler):
                 print(inc_i)
                 loss, acc, prototype = loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.clone(),inc_i=inc_i)
                 print(id(loss))
-                loss.backward()
+                if i == len(tr_dataloader):
+                    loss.backward()
+                else:
+                    loss.backward(retain_graph=True)
                 optim.step()
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
