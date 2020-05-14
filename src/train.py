@@ -121,7 +121,7 @@ def compute_prototype(input,target,n_support):
         # FIXME when torch will support where as np
         return target_cpu.eq(c).nonzero()[:n_support].squeeze(1)
     support_idxs = list(map(supp_idxs, classes))
-    return torch.stack([input_cpu.clone()[idx_list].mean(0) for idx_list in support_idxs])
+    return torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
 
 
 
@@ -202,7 +202,7 @@ def train(opt, model, optim, lr_scheduler):
             
             for i, (x, y) in enumerate(tqdm(tr_dataloader)):
                 optim.zero_grad()
-                print("x:{},y:{}".format(x.size(),y.squeeze().size()))
+                #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
                 x, y = x.to(device), y.squeeze().to(device)
 
                 model_output = model(x)
