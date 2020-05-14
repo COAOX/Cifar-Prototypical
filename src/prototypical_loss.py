@@ -13,7 +13,7 @@ class PrototypicalLoss(Module):
         self.n_support = n_support
 
     def forward(self, input, target, opt, old_prototypes, inc_i):
-        return prototypical_loss(input, target, self.n_support, opt, None if old_prototypes is None else old_prototypes.clone(), inc_i)
+        return prototypical_loss(input, target, self.n_support, opt, None if old_prototypes is None else old_prototypes, inc_i)
 
 
 def euclidean_dist(x, y):
@@ -80,9 +80,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
         prototypes = n_prototypes.clone()
     #print(old_prototypes)
     #print("loss prototypes:{}".format(prototypes))
-    if not old_prototypes is None:
-        print(old_prototypes)
-    print(prototypes)
+
     n_classes = prototypes.size()[0]
     #print(n_classes)
     # FIXME when torch will support where as np
