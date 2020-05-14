@@ -238,11 +238,11 @@ def train(opt, model, optim, lr_scheduler):
             test_dataloader=test_data,
              model=model, prototypes=prototypes)
 
-        model.load_state_dict(best_state)
-        print('Testing with best model..')
-        testf(opt=opt,
-             test_dataloader=test_data,
-             model=model, prototypes=prototypes)
+    model.load_state_dict(best_state)
+    print('Testing with best model..')
+    testf(opt=opt,
+         test_dataloader=test_data,
+         model=model, prototypes=prototypes)
     torch.save(model.state_dict(), last_model_path)
 
     for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
