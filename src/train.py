@@ -116,7 +116,9 @@ def testf(opt, test_dataloader, model, prototypes):
     return avg_acc
 
 def compute_prototype(input,target,n_support):
-    input.to('cpu')
+    target_cpu = target.to('cpu')
+    input_cpu = input.to('cpu')
+    classes = torch.unique(target_cpu)
     def supp_idxs(c):
         # FIXME when torch will support where as np
         return target_cpu.eq(c).nonzero()[:n_support].squeeze(1)
