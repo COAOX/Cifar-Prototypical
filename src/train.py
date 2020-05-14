@@ -150,7 +150,7 @@ def train(opt, model, optim, lr_scheduler):
     train_xs = []
     train_ys = []
     test_accs = []
-    prototypes = None
+    prototypes = torch.ones([20,256])
 
     for inc_i in range(opt.stage):
         print(f"Incremental num : {inc_i}")
