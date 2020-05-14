@@ -211,7 +211,7 @@ def train(opt, model, optim, lr_scheduler):
 
                 loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
 
-                if i == len(tr_dataloader):
+                if i == len(tr_dataloader)-1:
                     pp = compute_prototype(model_output.clone(),y,opt.num_support_tr)
                 loss.backward()
                 print("######next####")
