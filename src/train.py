@@ -15,6 +15,7 @@ import numpy as np
 import torch
 import os
 import argparse
+import copy
 
 
 
@@ -230,9 +231,10 @@ def train(opt, model, optim, lr_scheduler):
                 best_acc = avg_acc
                 best_state = model.state_dict()
         if not prototypes is None:
-            prototypes = torch.cat([prototypes,prototype],dim=0)
+            prototypes = torch.cat([prototypes,copy.deepcopy(prototype)],dim=0)
         else:
             prototypes = prototype
+
         print('Testing with last model..')
         testf(opt=opt,
             test_dataloader=test_data,

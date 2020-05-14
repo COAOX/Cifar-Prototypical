@@ -100,14 +100,14 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     dists = euclidean_dist(input_cpu, prototypes)
     #print(F.log_softmax(-dists, dim=1).size())
     log_p_y = F.log_softmax(-dists, dim=1)
-    #print(log_p_y)
+
     #target_inds = torch.arange(0, n_query)
     #target_inds = target_inds.view(1, n_query)
     #target_inds = target_inds.expand(n_classes, n_query).long()
     #target_inds = target_inds.eq()
     #print(dists)
     _, y_hat = log_p_y.max(1)
-    #print(y_hat)
+    
     #print(target_cpu)
     #print( y_hat.eq(target_cpu.squeeze()).float().mean())
     #target_inds = torch.arange(0, n_classes).view(n_classes, 1, 1).expand(n_classes, n_query, 1).long()
@@ -119,7 +119,10 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #print(target_inds.size())
     #print(log_p_y.type())
     #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
-
+    if inc_i = 1:
+        print("log_p_y size:{}".format(log_p_y.size()))
+        print(y_hat)
+        print(target_inds)
     loss_val = -torch.masked_select(log_p_y,target_inds.bool()).sum() #+log_p_y.squeeze().view(-1).mean()
     #print(log_p_y.size())
     #print(log_p_y)
