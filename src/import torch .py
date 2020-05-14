@@ -1,6 +1,6 @@
 import torch
-v=torch.Tensor([[1],[2],[3]])
-print(v+1)
-n=v.size(0)
-one_hot = torch.zeros(n,10).long()
-print(one_hot.scatter_(dim=1, index=v.long(), src=torch.ones(n, 10).long()))
+l = []
+v=torch.ones([3,3])
+l.extend(v)
+l.extend(torch.ones([10,10]))
+print(len(l))

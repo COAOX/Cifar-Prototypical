@@ -189,6 +189,10 @@ def train(opt, model, optim, lr_scheduler):
             train_acc.clear()
             train_loss.clear()
             #optim.zero_grad()
+            if prototypes is None:
+                pp = None
+            else:
+                pp = prototypes.clone()
             with torch.autograd.set_detect_anomaly(True):
                 for i, (x, y) in enumerate(tqdm(tr_dataloader)):
                     optim.zero_grad()
@@ -199,7 +203,7 @@ def train(opt, model, optim, lr_scheduler):
                     #print(model_output.size())
                     #print("#######model_output:{}".format(model_output.size()))
                     print(model_output)
-                    loss, acc, prototype = loss_fn(model_output.clone(), target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.clone(),inc_i=inc_i)
+                    loss, acc, prototype = loss_fn(model_output.clone(), target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=pp,inc_i=inc_i)
                     print(model_output)
                     if i == len(tr_dataloader):
                         loss.backward()
@@ -223,10 +227,8 @@ def train(opt, model, optim, lr_scheduler):
             for i, (x, y) in enumerate(tqdm(val_dataloader)):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
-                if inc_i == 1:
-                    print("{}:{}".format(id(prototypes),id(prototypes.clone())))
                 loss, acc, prototype = loss_fn(model_output, target=y,
-                                    n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=inc_i)
+                                    n_support=opt.num_support_val, opt=opt, old_prototypes=pp,inc_i=inc_i)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
@@ -240,9 +242,7 @@ def train(opt, model, optim, lr_scheduler):
                 best_acc = avg_acc
                 best_state = model.state_dict()
 
-        
-        print(prototype)
-        print(prototype.clone())
+
         if not prototypes is None:
             prototypes = torch.cat([prototypes,prototype.clone()],dim=0)
         else:
