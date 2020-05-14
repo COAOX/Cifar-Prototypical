@@ -12,8 +12,8 @@ class PrototypicalLoss(Module):
         super(PrototypicalLoss, self).__init__()
         self.n_support = n_support
 
-    def forward(self, input, target):
-        return prototypical_loss(input, target, self.n_support)
+    def forward(self, input, target, opt, old_prototypes, inc_i):
+        return prototypical_loss(input, target, self.n_support, opt, old_prototypes, inc_i)
 
 
 def euclidean_dist(x, y):
@@ -70,13 +70,13 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #print((inc_i+1)*opt.class_per_stage)
     n_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
     if old_prototypes is None:
-        prototypes = n_prototypes
+        prototypes = n_prototypes.clone()
     elif inc_i is None or old_prototypes.size()[0]>=(inc_i+1)*opt.class_per_stage:
         prototypes = old_prototypes
     elif not old_prototypes is None:
-        prototypes = torch.cat([old_prototypes,n_prototypes],dim=0)
+        prototypes = torch.cat([old_prototypes,n_prototypes.clone()],dim=0)
     else:
-        prototypes = n_prototypes
+        prototypes = n_prototypes.clone()
     #print(old_prototypes)
     #print("loss prototypes:{}".format(prototypes))
     print(prototypes.size())
