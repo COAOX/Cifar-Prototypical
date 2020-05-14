@@ -119,7 +119,7 @@ def train(opt, model, optim, lr_scheduler):
     '''
     Train the model with the prototypical learning algorithm
     '''
-    torch.autograd.set_detect_anomaly(True)
+    
     input_transform= Compose([
                     transforms.RandomHorizontalFlip(),
                     transforms.RandomCrop(32,padding=4),
@@ -189,25 +189,27 @@ def train(opt, model, optim, lr_scheduler):
             train_acc.clear()
             train_loss.clear()
             #optim.zero_grad()
-            for i, (x, y) in enumerate(tqdm(tr_dataloader)):
-                optim.zero_grad()
-                print("---------{}---------".format(i))
-                #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
-                x, y = x.to(device), y.squeeze().to(device)
+            with torch.autograd.set_detect_anomaly(True):
+                for i, (x, y) in enumerate(tqdm(tr_dataloader)):
+                    optim.zero_grad()
+                    print("---------{}---------".format(i))
+                    #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
+                    x, y = x.to(device), y.squeeze().to(device)
 
-                model_output = model(x)
-                #print(model_output.size())
-                #print("#######model_output:{}".format(model_output.size()))
-                print(inc_i)
-                loss, acc, prototype = loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.clone(),inc_i=inc_i)
-                print(id(loss))
-                if i == len(tr_dataloader):
-                    loss.backward()
-                else:
-                    loss.backward(retain_graph=True)
-                optim.step()
-                train_loss.append(loss.item())
-                train_acc.append(acc.item())
+                    model_output = model(x)
+                    #print(model_output.size())
+                    #print("#######model_output:{}".format(model_output.size()))
+                    if not prototypes is None:
+                        print(prototypes)
+                    loss, acc, prototype = loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.clone(),inc_i=inc_i)
+                    
+                    if i == len(tr_dataloader):
+                        loss.backward()
+                    else:
+                        loss.backward(retain_graph=True)
+                    optim.step()
+                    train_loss.append(loss.item())
+                    train_acc.append(acc.item())
 
             avg_loss = np.mean(train_loss)
             avg_acc = np.mean(train_acc)
