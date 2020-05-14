@@ -1,5 +1,5 @@
 import torch.nn as nn
-
+import torch
 
 def conv_block(in_channels, out_channels):
     '''
