@@ -108,7 +108,7 @@ def testf(opt, test_dataloader, model, prototypes):
             x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
             _, acc, _ = loss_fn(model_output, target=y,
-                             n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=None)
+                             n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes[opt.stage-1],inc_i=None)
             avg_acc.append(acc.item())
     avg_acc = np.mean(avg_acc)
     print('Test Acc: {}'.format(avg_acc))
@@ -247,6 +247,8 @@ def train(opt, model, optim, lr_scheduler):
         else:
             prototypes.extend(prototype.clone())
 
+        print(prototype)
+        print(prototypes[-1])
         print('Testing with last model..')
         #testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
 
