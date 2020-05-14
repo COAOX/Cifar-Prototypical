@@ -200,7 +200,7 @@ def train(opt, model, optim, lr_scheduler):
                     #print("#######model_output:{}".format(model_output.size()))
                     if not prototypes is None:
                         print(prototypes)
-                    loss, acc, prototype = loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.clone(),inc_i=inc_i)
+                    loss, acc, prototype = loss_fn(model_output.clone(), target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.clone(),inc_i=inc_i)
                     print(loss)
                     if i == len(tr_dataloader):
                         loss.backward()
