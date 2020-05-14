@@ -192,15 +192,15 @@ def train(opt, model, optim, lr_scheduler):
             with torch.autograd.set_detect_anomaly(True):
                 for i, (x, y) in enumerate(tqdm(tr_dataloader)):
                     optim.zero_grad()
-                    print("x:{},y:{}".format(x.size(),y.squeeze().size()))
+                    #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
                     x, y = x.to(device), y.squeeze().to(device)
 
                     model_output = model(x)
                     #print(model_output.size())
                     #print("#######model_output:{}".format(model_output.size()))
-                    print(model_output)
+                    #print(model_output)
                     loss, acc, prototype = loss_fn(model_output.clone(), target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=prototypes[inc_i],inc_i=inc_i)
-                    print(model_output)
+                    #print(model_output)
                     if i == len(tr_dataloader):
                         loss.backward()
                     else:
@@ -223,8 +223,8 @@ def train(opt, model, optim, lr_scheduler):
             for i, (x, y) in enumerate(tqdm(val_dataloader)):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
-                if inc_i == 1:
-                    print("{}:{}".format(id(prototypes),id(prototypes.clone())))
+                #if inc_i == 1:
+                #    print("{}:{}".format(id(prototypes),id(prototypes.clone())))
                 loss, acc, prototype = loss_fn(model_output, target=y,
                                     n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes[inc_i],inc_i=inc_i)
                 val_loss.append(loss.item())
