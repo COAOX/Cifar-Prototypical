@@ -214,7 +214,7 @@ def train(opt, model, optim, lr_scheduler):
                 loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
 
                 if i == len(tr_dataloader)-1:
-                    pp = compute_prototype(model_output.item(),y,opt.num_support_tr)
+                    pp = compute_prototype(model_output,y,opt.num_support_tr)
                     print(pp)
                     loss.backward(retain_graph=True)
                 else:
@@ -322,7 +322,7 @@ def main():
                 optim=optim,
                 lr_scheduler=lr_scheduler)
 
-
+    print("----------train finished----------")
     # optim = init_optim(options, model)
     # lr_scheduler = init_lr_scheduler(options, optim)
 
