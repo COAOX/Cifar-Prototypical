@@ -162,7 +162,7 @@ def train(opt, model, optim, lr_scheduler):
     train_xs = []
     train_ys = []
     test_accs = []
-    prototypes = torch.zeros([opt.stage*opt.class_per_stage,256])
+    prototypes = None
     for inc_i in range(opt.stage):
         print(f"Incremental num : {inc_i}")
         train, val, test = dataset.getNextClasses(inc_i)
@@ -209,13 +209,12 @@ def train(opt, model, optim, lr_scheduler):
                 #print(model_output.size())
                 #print("#######model_output:{}".format(model_output.size()))
 
-                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=prototypes.detach(), inc_i=inc_i)
+                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i)
 
+                loss.backward(retain_graph=True)
                 if i == len(tr_dataloader)-1:
-                    loss.backward(retain_graph=True)
                     pp = compute_prototype(model_output.clone(),y.clone(),opt.num_support_tr)
-                else:
-                    loss.backward(retain_graph=True)
+
                 optim.step()
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
@@ -232,7 +231,7 @@ def train(opt, model, optim, lr_scheduler):
             for i, (x, y) in enumerate(tqdm(val_dataloader)):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
-                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_val, opt=opt, old_prototypes= prototypes.detach(),inc_i=inc_i)
+                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_val, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(),inc_i=inc_i)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
@@ -248,13 +247,13 @@ def train(opt, model, optim, lr_scheduler):
 
         #pp = torch.ones([20,256])
         if inc_i ==0:
-            prototypes = torch.cat([pp,prototypes[opt.class_per_stage:]],dim=0)
+            prototypes = pp
         else:
             #prototypes = torch.ones([20,256])
-            prototypes = torch.cat([prototypes[:inc_i*opt.class_per_stage],pp,prototypes[(inc_i+1)*opt.class_per_stage:]],dim=0)
+            prototypes = torch.cat([prototypes,pp],dim=0)
 
         print('Testing with last model..')
-        #testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
+        testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
 
     model.load_state_dict(best_state)
     print('Testing with best model..')
