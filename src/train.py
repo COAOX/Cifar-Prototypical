@@ -213,7 +213,7 @@ def train(opt, model, optim, lr_scheduler):
 
                 loss.backward(retain_graph=True)
                 if i == len(tr_dataloader)-1:
-                    pp = compute_prototype(model_output.clone(),y.clone(),opt.num_support_tr)
+                    pp = compute_prototype(model_output,y,opt.num_support_tr)
 
                 optim.step()
                 train_loss.append(loss.item())

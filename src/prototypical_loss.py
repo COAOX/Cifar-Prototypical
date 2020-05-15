@@ -68,19 +68,17 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #if not old_prototypes is None:
     #    print(old_prototypes.size()[0])
     #print((inc_i+1)*opt.class_per_stage)
-    n_prototypes = torch.stack([input_cpu.clone()[idx_list].mean(0) for idx_list in support_idxs])
+    n_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
     #prototypes = torch.cat([old_prototypes,n_prototypes.clone()],dim=0)
     if old_prototypes is None:
-        prototypes = n_prototypes.clone()
+        prototypes = n_prototypes
     elif inc_i is None or old_prototypes.size()[0]>=(inc_i+1)*opt.class_per_stage:
         prototypes = old_prototypes
     elif not old_prototypes is None:
-        prototypes = torch.cat([old_prototypes,n_prototypes.clone()],dim=0)
+        prototypes = torch.cat([old_prototypes,n_prototypes],dim=0)
     else:
-        prototypes = n_prototypes.clone()
-    if not old_prototypes is None:
-        print(old_prototypes.size())
-    print(prototypes.size())
+        prototypes = n_prototypes
+
     #print("loss prototypes:{}".format(prototypes))
 
     n_classes = prototypes.size()[0]
