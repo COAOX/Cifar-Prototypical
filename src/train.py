@@ -246,12 +246,12 @@ def train(opt, model, optim, lr_scheduler):
                 best_acc = avg_acc
                 best_state = model.state_dict()
 
-        pp = torch.ones([20,256])
+        #pp = torch.ones([20,256])
         if inc_i ==0:
-            prototypes = torch.cat([pp.clone(),prototypes[opt.class_per_stage:]],dim=0)
+            prototypes = torch.cat([pp,prototypes[opt.class_per_stage:]],dim=0)
         else:
             #prototypes = torch.ones([20,256])
-            prototypes = torch.cat([prototypes[:inc_i*opt.class_per_stage],pp.clone(),prototypes[(inc_i+1)*opt.class_per_stage:]],dim=0)
+            prototypes = torch.cat([prototypes[:inc_i*opt.class_per_stage],pp,prototypes[(inc_i+1)*opt.class_per_stage:]],dim=0)
 
         print('Testing with last model..')
         #testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
