@@ -63,7 +63,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     # FIXME when torch will support where as np
     # assuming n_query, n_target constants
     #n_query = target_cpu.eq(classes[0].item()).sum().item() - n_support
-    old_prototypes = old_prototypes[:inc_i*20]
+    old_prototypes = old_prototypes[:inc_i*20].from_numpy()
     support_idxs = list(map(supp_idxs, classes))
     #if not old_prototypes is None:
     #    print(old_prototypes.size()[0])
@@ -122,7 +122,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #print(log_p_y.type())
     #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
     
-    loss_val = -torch.masked_select(log_p_y,target_inds.bool()).sum() #+log_p_y.squeeze().view(-1).mean()
+    loss_val = -torch.masked_select(log_p_y,target_inds.byte()).sum() #+log_p_y.squeeze().view(-1).mean()
     #print(log_p_y.size())
     #print(log_p_y)
 
