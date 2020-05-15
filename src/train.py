@@ -214,7 +214,8 @@ def train(opt, model, optim, lr_scheduler):
                 loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
 
                 if i == len(tr_dataloader)-1:
-                    pp = compute_prototype(model_output.clone(),y,opt.num_support_tr)
+                    pp = compute_prototype(model_output.item(),y,opt.num_support_tr)
+                    print(pp)
                     loss.backward(retain_graph=True)
                 else:
                     loss.backward(retain_graph=True)
@@ -254,8 +255,8 @@ def train(opt, model, optim, lr_scheduler):
         if not prototypes is None:
             prototypes = torch.cat([prototypes,pp],dim=0)
         else:
-            prototypes = torch.ones([20,256])
-            #prototypes = pp
+            #prototypes = torch.ones([20,256])
+            prototypes = pp.clone()
 
         print('Testing with last model..')
         #testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
