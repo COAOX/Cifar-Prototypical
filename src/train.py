@@ -95,7 +95,7 @@ def save_list_to_file(path, thelist):
         for item in thelist:
             f.write("%s\n" % item)
 
-def testf(opt, test_dataloader, model, prototypes):
+def testf(opt, test_dataloader, model, prototypes, n_per_stage):
     '''
     Test the model trained with the prototypical learning algorithm
     '''
@@ -103,6 +103,9 @@ def testf(opt, test_dataloader, model, prototypes):
 
     device = 'cuda:0' if torch.cuda.is_available() and opt.cuda else 'cpu'
     avg_acc = list()
+    tem_acc = list()
+    ind = 0
+    stage_acc = list()
     for epoch in range(10):
         for i, (x, y) in enumerate(tqdm(test_dataloader)):
             x, y = x.to(device), y.squeeze(-1).to(device)
@@ -110,7 +113,14 @@ def testf(opt, test_dataloader, model, prototypes):
             _, acc= loss_fn(model_output, target=y,
                              n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=None)
             avg_acc.append(acc.item())
+            tem_acc.append(acc.item())
+            if (i+1)*opt.batch_size>=n_per_stage[ind]:
+                stage_acc.append(np.mean(tem_acc))
+                tem_acc.clear()
+                ind = ind+1
+
     avg_acc = np.mean(avg_acc)
+    print('Stage Acc: {}'.format(stage_acc))
     print('Test Acc: {}'.format(avg_acc))
 
     return avg_acc
@@ -162,6 +172,7 @@ def train(opt, model, optim, lr_scheduler):
     train_xs = []
     train_ys = []
     test_accs = []
+    n_per_stage = []
     prototypes = None
     for inc_i in range(opt.stage):
         print(f"Incremental num : {inc_i}")
@@ -191,7 +202,7 @@ def train(opt, model, optim, lr_scheduler):
         test_data = DataLoader(BatchData(test_xs, test_ys, input_transform_eval),
                     batch_size=opt.batch_size, shuffle=False)
 
-        
+        n_per_stage.extend(len(test_data))
         for epoch in range(opt.epochs):
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
@@ -253,7 +264,7 @@ def train(opt, model, optim, lr_scheduler):
             prototypes = torch.cat([prototypes,pp],dim=0)
 
         print('Testing with last model..')
-        testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
+        testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes, n_per_stage)
 
     model.load_state_dict(best_state)
     print('Testing with best model..')

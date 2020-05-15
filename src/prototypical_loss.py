@@ -13,7 +13,7 @@ class PrototypicalLoss(Module):
         self.n_support = n_support
 
     def forward(self, input, target, opt, old_prototypes, inc_i):
-        return prototypical_loss(input, target, self.n_support, opt, None if old_prototypes is None else old_prototypes, inc_i)
+        return prototypical_loss(input, target, self.n_support, opt, old_prototypes, inc_i)
 
 
 def euclidean_dist(x, y):
@@ -106,6 +106,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #target_inds = target_inds.expand(n_classes, n_query).long()
     #target_inds = target_inds.eq()
     #print(dists)
+    prototype_dist = euclidean_dist(prototypes,prototypes)
     _, y_hat = log_p_y.max(1)
     
     #print(target_cpu)
@@ -119,8 +120,13 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #print(target_inds.size())
     #print(log_p_y.type())
     #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
-    
-    loss_val = -torch.masked_select(log_p_y,target_inds.bool()).sum() #+log_p_y.squeeze().view(-1).mean()
+    target_ninds = target_inds.eq(0)
+    #torch.masked_select(log_p_y, target_ninds.bool()).mean()
+    proto_dist_mask = prototype_dist.eq(0)
+    proto_dist_mask = proto_dist_mask.eq(0)
+    dis_loss = torch.rsqrt(torch.masked_select(prototype_dist,proto_dist_mask.bool())).mean()
+
+    loss_val = dis_loss-torch.masked_select(log_p_y,target_inds.bool()).mean() #+log_p_y.squeeze().view(-1).mean()
     #print(log_p_y.size())
     #print(log_p_y)
 
