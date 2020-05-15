@@ -162,8 +162,7 @@ def train(opt, model, optim, lr_scheduler):
     train_xs = []
     train_ys = []
     test_accs = []
-    prototypes = None
-
+    prototypes = torch.zero([opt.stage*opt.class_per_stage,256])
     for inc_i in range(opt.stage):
         print(f"Incremental num : {inc_i}")
         train, val, test = dataset.getNextClasses(inc_i)
@@ -192,12 +191,11 @@ def train(opt, model, optim, lr_scheduler):
         test_data = DataLoader(BatchData(test_xs, test_ys, input_transform_eval),
                     batch_size=opt.batch_size, shuffle=False)
 
-        pp = None
+        
         for epoch in range(opt.epochs):
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
             model.train()
-            print("######train#######")
             train_acc.clear()
             train_loss.clear()
             #optim.zero_grad()
@@ -211,15 +209,14 @@ def train(opt, model, optim, lr_scheduler):
                 #print(model_output.size())
                 #print("#######model_output:{}".format(model_output.size()))
 
-                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
+                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=prototypes, inc_i=inc_i)
 
                 if i == len(tr_dataloader)-1:
-                    pp = compute_prototype(model_output,y,opt.num_support_tr)
+                    pp = compute_prototype(model_output.clone(),y.clone(),opt.num_support_tr)
                     print(pp)
                     loss.backward(retain_graph=True)
                 else:
                     loss.backward(retain_graph=True)
-                print("######next####")
                 optim.step()
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
@@ -237,7 +234,7 @@ def train(opt, model, optim, lr_scheduler):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
                 loss, acc= loss_fn(model_output, target=y,
-                                    n_support=opt.num_support_val, opt=opt, old_prototypes=None if prototypes is None else prototypes,inc_i=inc_i)
+                                    n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=inc_i)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
@@ -252,11 +249,11 @@ def train(opt, model, optim, lr_scheduler):
                 best_state = model.state_dict()
 
 
-        if not prototypes is None:
-            prototypes = torch.cat([prototypes,pp],dim=0)
+        if inc_i ==0:
+            prototypes = torch.cat([pp,prototypes[opt.class_per_stage:]],dim=0)
         else:
             #prototypes = torch.ones([20,256])
-            prototypes = pp.clone()
+            prototypes = torch.cat([prototypes[:inc_i*opt.class_per_stage],pp,prototypes[(inc_i+1)*opt.class_per_stage:]],dim=0)
 
         print('Testing with last model..')
         #testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes)
