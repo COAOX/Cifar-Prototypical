@@ -5,7 +5,7 @@ import random
 
 class Cifar100:
     def __init__(self):
-        with open('cifar100/train','rb') as f:
+        with open('cifar100/train_meta','rb') as f:
             self.train = pickle.load(f, encoding='latin1')
         with open('cifar100/test','rb') as f:
             self.test = pickle.load(f, encoding='latin1')

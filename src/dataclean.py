@@ -1,10 +1,14 @@
 import pickle
 import os
 import random
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--seed', default = 20, type = int)
+args=parser.parse_args()
 def choice(i):
     reed = random.random()
     ind = random.random()
-    n = 20**-ind
+    n = args.seed**-ind
     #if i<50:
         #n=1.0
     #else:

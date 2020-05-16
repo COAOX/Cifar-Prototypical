@@ -57,7 +57,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
         return target_cpu.eq(c).nonzero()[:n_support].squeeze(1)
 
     # FIXME when torch.unique will be available on cuda too
-    classes = torch.unique(target_cpu)
+    classes = torch.arange(0,class_per_stage)
     
     n_target = len(target_cpu)
     # FIXME when torch will support where as np
