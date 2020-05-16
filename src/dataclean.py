@@ -30,6 +30,6 @@ for train_d, train_l in zip(train_data, train_labels):
 	res_labels.append(train_l)
 train['data'] = res_data
 train['fine_labels'] = res_labels
-with open('cifar100/train','wb') as f:
+with open('cifar100/train_meta','wb') as f:
 	pickle.dump(train, f)
 

@@ -130,15 +130,31 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage):
 
     return avg_acc
 
-def compute_prototype(input,target,n_support):
+
+
+def compute_NCM_img_id(input,target,n_support):
     target_cpu = target.to('cpu')
     input_cpu = input.to('cpu')
     classes = torch.unique(target_cpu)
     def supp_idxs(c):
         # FIXME when torch will support where as np
         return target_cpu.eq(c).nonzero()[:n_support].squeeze(1)
+    def class_img(c):
+        return target_cpu.eq(c).nonzero().squeeze(1)
     support_idxs = list(map(supp_idxs, classes))
-    return torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
+    prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
+    NCM = torch.zeros([n_support,1])
+    for i,c in enumerate(classes):
+        c_img = class_img(c)
+        d = input_cpu.size(1)
+        n = len(c_img)
+        dis = torch.pow(input_cpu[c_img]-prototypes[i].expand(n,d),2).sum(1)
+        _,index = torch.sort(dis,dim=0,descending=False)[:n_support]
+        img_index = c_img[index].unsqueeze(1)
+        NCM = torch.cat([NCM,img_index],dim=1)
+    print(NCM.size())
+    return NCM
+
 
 
 
@@ -178,7 +194,7 @@ def train(opt, model, optim, lr_scheduler):
     train_ys = []
     test_accs = []
     n_per_stage = []
-    prototypes = None
+    support_imgs = None
     for inc_i in range(opt.stage):
         print(f"Incremental num : {inc_i}")
         train, val, test = dataset.getNextClasses(inc_i)
@@ -216,24 +232,26 @@ def train(opt, model, optim, lr_scheduler):
             train_loss.clear()
             #optim.zero_grad()
             
-            for i, (x, y) in enumerate(tqdm(tr_dataloader)):
+            for i, (cx, cy) in enumerate(tqdm(tr_dataloader)):
                 optim.zero_grad()
                 #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
-                x, y = x.to(device), y.squeeze().to(device)
+                x, y = cx.to(device), cy.squeeze().to(device)
 
                 model_output = model(x)
                 #print(model_output.size())
                 #print("#######model_output:{}".format(model_output.size()))
 
+
+
                 loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i)
 
                 loss.backward(retain_graph=True)
-                if i == len(tr_dataloader)-1:
-                    pp = compute_prototype(model_output,y,opt.num_support_tr)
-
                 optim.step()
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
+                if epoch == opt.epochs-1 and i == len(tr_dataloader)-1:
+                    NCM_img_id = compute_NCM_img_id(model_output,y,opt.num_support_tr)#n_support*stage_per_classes
+                    support_img = cx.index_select(0,NCM_img_id.view(-1).squeeze())#n_support*stage_per_classes,img_size
             avg_loss = np.mean(train_loss)
             avg_acc = np.mean(train_acc)
             print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
@@ -260,14 +278,18 @@ def train(opt, model, optim, lr_scheduler):
                 torch.save(model.state_dict(), best_model_path)
                 best_acc = avg_acc
                 best_state = model.state_dict()
-
+        
         #pp = torch.ones([20,256])
         if inc_i ==0:
-            prototypes = pp
+            support_imgs = support_img
         else:
             #prototypes = torch.ones([20,256])
-            prototypes = torch.cat([prototypes,pp],dim=0)
-
+            #tem = torch.split(support_img,opt.n_support,dim=0)
+            support_imgs = torch.cat([support_imgs,support_img],dim=0)#n_classes x n_support x img.size
+        prototypes = None
+        if not support_imgs is None:
+            prototypes = torch.split(model(support_imgs),n_support,dim=0)#n_class x n_support x prototypes.size()--256
+            prototypes = prototypes.mean(1)
         print('Testing with last model..')
         testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes, n_per_stage=n_per_stage)
 
