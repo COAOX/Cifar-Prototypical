@@ -58,7 +58,7 @@ def get_parser():
     parser.add_argument('-nsNCM', '--num_support_NCM',
                         type=int,
                         help='number of samples per stage to use as query for training, default=5',
-                        default=3)
+                        default=5)
     parser.add_argument('-nsNCM', '--num_support_ite',
                         type=int,
                         help='number of samples per stage to use as query for training, default=5',
