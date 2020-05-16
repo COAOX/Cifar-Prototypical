@@ -110,7 +110,8 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage):
     for epoch in range(10):
         
         for i, (x, y) in enumerate(tqdm(test_dataloader)):
-            count = count+y.squeeze(-1).size()
+            t = y.squeeze(-1).size(0)
+            
             x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
             _, acc= loss_fn(model_output, target=y,
@@ -118,13 +119,13 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage):
             avg_acc.append(acc.item())
             if epoch ==9:
                 tem_acc.append(acc.item())
-            #print(tem_acc)
-            if epoch==9 and ind<len(n_per_stage) and count>=n_per_stage[ind]:
+                count = count+t
+                if ind<len(n_per_stage) and count>=n_per_stage[ind]:
                 #print("ind:{}".format(ind))
-                stage_acc.append(np.mean(tem_acc))
-                tem_acc.clear()
-                ind = ind+1
-                count=0
+                    stage_acc.append(np.mean(tem_acc))
+                    tem_acc.clear()
+                    ind = ind+1
+                    count=0
 
     avg_acc = np.mean(avg_acc)
     print('Stage Acc: {}'.format(stage_acc))
