@@ -1,6 +1,4 @@
 import torch
-l = []
-v=torch.ones([3,3])
-l.extend(v)
-l.extend(torch.ones([10,10]))
-print(len(l))
+s = torch.arange(0,10)
+nn = [(int)(ss/10) for ss in s]
+print(nn)

@@ -3,7 +3,7 @@ import os
 import random
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--seed', default = 20, type = int)
+parser.add_argument('--seed', default = 15, type = int)
 args=parser.parse_args()
 def choice(i):
     reed = random.random()
