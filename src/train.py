@@ -105,19 +105,24 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage):
     avg_acc = list()
     tem_acc = list()
     ind = 0
+    count=0
     stage_acc = list()
     for epoch in range(10):
         for i, (x, y) in enumerate(tqdm(test_dataloader)):
+            count = count+1
             x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
             _, acc= loss_fn(model_output, target=y,
                              n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=None)
             avg_acc.append(acc.item())
             tem_acc.append(acc.item())
-            if (i+1)*opt.batch_size>=n_per_stage[ind]:
+            #print(tem_acc)
+            if ind<len(n_per_stage) and count*opt.batch_size>=n_per_stage[ind]:
+                print("ind:{}".format(ind))
                 stage_acc.append(np.mean(tem_acc))
                 tem_acc.clear()
                 ind = ind+1
+                count=0
 
     avg_acc = np.mean(avg_acc)
     print('Stage Acc: {}'.format(stage_acc))
@@ -202,7 +207,7 @@ def train(opt, model, optim, lr_scheduler):
         test_data = DataLoader(BatchData(test_xs, test_ys, input_transform_eval),
                     batch_size=opt.batch_size, shuffle=False)
 
-        n_per_stage.extend(len(test_data))
+        n_per_stage.append(len(test_data))
         for epoch in range(opt.epochs):
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
@@ -264,7 +269,7 @@ def train(opt, model, optim, lr_scheduler):
             prototypes = torch.cat([prototypes,pp],dim=0)
 
         print('Testing with last model..')
-        testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes, n_per_stage)
+        testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes, n_per_stage=n_per_stage)
 
     model.load_state_dict(best_state)
     print('Testing with best model..')
