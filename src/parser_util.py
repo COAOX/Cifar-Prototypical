@@ -55,6 +55,11 @@ def get_parser():
                         help='number of samples per class to use as query for training, default=5',
                         default=5)
 
+    parser.add_argument('-nsSt', '--num_support_stage',
+                        type=int,
+                        help='number of samples per stage to use as query for training, default=5',
+                        default=5)
+
     parser.add_argument('-cVa', '--classes_per_it_val',
                         type=int,
                         help='number of random classes per episode for validation, default=5',

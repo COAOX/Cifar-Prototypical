@@ -143,17 +143,23 @@ def compute_NCM_img_id(input,target,n_support):
         return target_cpu.eq(c).nonzero().squeeze(1)
     support_idxs = list(map(supp_idxs, classes))
     prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
-    NCM = torch.zeros([n_support,1])
+    NCM = torch.zeros([n_support,1]).long()
+    #print(classes)
     for i,c in enumerate(classes):
         c_img = class_img(c)
         d = input_cpu.size(1)
         n = len(c_img)
         dis = torch.pow(input_cpu[c_img]-prototypes[i].expand(n,d),2).sum(1)
-        _,index = torch.sort(dis,dim=0,descending=False)[:n_support]
+        #print(dis)
+        ord_dis,index = torch.sort(dis,dim=0,descending=False)
+        #print(ord_dis)
+        #print(index)
         img_index = c_img[index].unsqueeze(1)
-        NCM = torch.cat([NCM,img_index],dim=1)
-    print(NCM.size())
-    return NCM
+        #print(c_img)
+        #print(img_index)
+        NCM = torch.cat([NCM,img_index[:n_support]],dim=1)
+        #print("NCM:{}".format(NCM.size()))
+    return NCM[1:]
 
 
 
@@ -195,6 +201,7 @@ def train(opt, model, optim, lr_scheduler):
     test_accs = []
     n_per_stage = []
     support_imgs = None
+    prototypes = None
     for inc_i in range(opt.stage):
         print(f"Incremental num : {inc_i}")
         train, val, test = dataset.getNextClasses(inc_i)
@@ -250,6 +257,7 @@ def train(opt, model, optim, lr_scheduler):
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
                 if epoch == opt.epochs-1 and i == len(tr_dataloader)-1:
+                    print("Compute NCM")
                     NCM_img_id = compute_NCM_img_id(model_output,y,opt.num_support_tr)#n_support*stage_per_classes
                     support_img = cx.index_select(0,NCM_img_id.view(-1).squeeze())#n_support*stage_per_classes,img_size
             avg_loss = np.mean(train_loss)
@@ -286,12 +294,14 @@ def train(opt, model, optim, lr_scheduler):
             #prototypes = torch.ones([20,256])
             #tem = torch.split(support_img,opt.n_support,dim=0)
             support_imgs = torch.cat([support_imgs,support_img],dim=0)#n_classes x n_support x img.size
-        prototypes = None
+        
         if not support_imgs is None:
-            prototypes = torch.split(model(support_imgs),n_support,dim=0)#n_class x n_support x prototypes.size()--256
-            prototypes = prototypes.mean(1)
+            prototypes = torch.stack(torch.split(model(support_imgs.to(device)),opt.num_support_stage,dim=0))#n_class x n_support x prototypes.size()--256
+            print(prototypes)
+            print(prototypes.size())
+            prototypes = prototypes.mean(1).to('cpu')
         print('Testing with last model..')
-        testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes, n_per_stage=n_per_stage)
+        testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes.to('cpu'), n_per_stage=n_per_stage)
 
     model.load_state_dict(best_state)
     print('Testing with best model..')
