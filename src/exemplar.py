@@ -35,6 +35,10 @@ class Exemplar:
                 if len(self.train[y]) < train_store_num:
                     self.train[y].append(x)
 
+    def get_train_items(self):
+        return self.train.items()
+
+
     def get_exemplar_train(self):
         exemplar_train_x = []
         exemplar_train_y = []
@@ -55,3 +59,9 @@ class Exemplar:
 
     def get_cur_cls(self):
         return self.cur_cls
+
+    def clear(self):
+        self.val.clear()
+        self.train.clear()
+        self.cur_cls = 0
+

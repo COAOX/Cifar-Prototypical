@@ -58,19 +58,21 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
 
     # FIXME when torch.unique will be available on cuda too
     cn = opt.class_per_stage
-    classes = torch.arange(inc_i*cn,(inc_i+1)*cn)
-    
+    if inc_i is None:
+        classes = target_cpu.unique()
+    else:
+        classes = torch.arange(inc_i*cn,(inc_i+1)*cn)
+    #print(target_cpu.unique())
     n_target = len(target_cpu)
     # FIXME when torch will support where as np
     # assuming n_query, n_target constants
     #n_query = target_cpu.eq(classes[0].item()).sum().item() - n_support
-
     support_idxs = list(map(supp_idxs, classes))
     #if not old_prototypes is None:
     #    print(old_prototypes.size()[0])
     #print((inc_i+1)*opt.class_per_stage)
     n_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
-    n_prototypes = n_prototypes.where(n_prototypes.notnull(),opt.edge)
+    n_prototypes = n_prototypes.where(n_prototypes==n_prototypes,torch.full(n_prototypes.size(),opt.edge))
     #prototypes = torch.cat([old_prototypes,n_prototypes.clone()],dim=0)
     if old_prototypes is None:
         prototypes = n_prototypes
@@ -109,8 +111,9 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #target_inds = target_inds.eq()
     #print(dists)
     prototype_dist = euclidean_dist(prototypes,prototypes)
+    #print(prototype_dist)
     _, y_hat = log_p_y.max(1)
-    print(prototype_dist)
+    #print(prototype_dist)
     #print(target_cpu)
     #print( y_hat.eq(target_cpu.squeeze()).float().mean())
     #target_inds = torch.arange(0, n_classes).view(n_classes, 1, 1).expand(n_classes, n_query, 1).long()

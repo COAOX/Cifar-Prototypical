@@ -55,10 +55,14 @@ def get_parser():
                         help='number of samples per class to use as query for training, default=5',
                         default=5)
 
-    parser.add_argument('-nsSt', '--num_support_stage',
+    parser.add_argument('-nsNCM', '--num_support_NCM',
                         type=int,
                         help='number of samples per stage to use as query for training, default=5',
-                        default=5)
+                        default=3)
+    parser.add_argument('-nsNCM', '--num_support_ite',
+                        type=int,
+                        help='number of samples per stage to use as query for training, default=5',
+                        default=1)
 
     parser.add_argument('-cVa', '--classes_per_it_val',
                         type=int,
@@ -83,12 +87,12 @@ def get_parser():
     parser.add_argument('--cuda',
                         action='store_true',
                         help='enables cuda')
-    parser.add_argument('--batch_size', default = 512, type = int)
+    parser.add_argument('--batch_size', default = 32, type = int)
     parser.add_argument('--lr', default = 0.1, type = int)
     parser.add_argument('--max_size', default = 2000, type = int)
     parser.add_argument('--total_cls', default = 100, type = int)
-    parser.add_argument('--stage',default = 10, type = int)
-    parser.add_argument('--class_per_stage',default = 10, type = int)
+    parser.add_argument('--stage',default = 5, type = int)
+    parser.add_argument('--class_per_stage',default = 20, type = int)
     parser.add_argument('--edge',default = 10000, type = int)
 
     return parser

@@ -5,7 +5,7 @@ import random
 
 class Cifar100:
     def __init__(self):
-        with open('cifar100/train_meta','rb') as f:
+        with open('cifar100/train','rb') as f:
             self.train = pickle.load(f, encoding='latin1')
         with open('cifar100/test','rb') as f:
             self.test = pickle.load(f, encoding='latin1')
@@ -20,7 +20,7 @@ class Cifar100:
 
 
     def initialize(self):
-        train_groups = [[],[],[],[],[],[],[],[],[],[]]
+        train_groups = [[],[],[],[],[]]
         for train_data, train_label in zip(self.train_data, self.train_labels):
             # print(train_data.shape)
             
@@ -28,23 +28,23 @@ class Cifar100:
             train_data_g = train_data[1024:2048].reshape(32, 32)
             train_data_b = train_data[2048:].reshape(32, 32)
             train_data = np.dstack((train_data_r, train_data_g, train_data_b))
-            nn = (int)(train_label/10)
+            nn = (int)(train_label/20)
             train_groups[nn].append((train_data,train_label))
 
-        val_groups = [[],[],[],[],[],[],[],[],[],[]]
+        val_groups = [[],[],[],[],[]]
         for i, train_group in enumerate(train_groups):
             lle = len(train_groups[i])
             print("dataset size i: "+str(i)+" , len: "+str(lle))
             val_groups[i] = train_groups[i][int(0.9*lle):]
             train_groups[i] = train_groups[i][:int(0.9*lle)]
 
-        test_groups = [[],[],[],[],[],[],[],[],[],[]]
+        test_groups = [[],[],[],[],[]]
         for test_data, test_label in zip(self.test_data, self.test_labels):
             test_data_r = test_data[:1024].reshape(32, 32)
             test_data_g = test_data[1024:2048].reshape(32, 32)
             test_data_b = test_data[2048:].reshape(32, 32)
             test_data = np.dstack((test_data_r, test_data_g, test_data_b))
-            nn = (int)(test_label/10)
+            nn = (int)(test_label/20)
             test_groups[nn].append((test_data,test_label))
         return train_groups, val_groups, test_groups
 
