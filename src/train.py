@@ -108,17 +108,19 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage):
     count=0
     stage_acc = list()
     for epoch in range(10):
+        
         for i, (x, y) in enumerate(tqdm(test_dataloader)):
-            count = count+1
+            count = count+y.squeeze(-1).size()
             x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
             _, acc= loss_fn(model_output, target=y,
                              n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=None)
             avg_acc.append(acc.item())
-            tem_acc.append(acc.item())
+            if epoch ==9:
+                tem_acc.append(acc.item())
             #print(tem_acc)
-            if ind<len(n_per_stage) and count*opt.batch_size>=n_per_stage[ind]:
-                print("ind:{}".format(ind))
+            if epoch==9 and ind<len(n_per_stage) and count>=n_per_stage[ind]:
+                #print("ind:{}".format(ind))
                 stage_acc.append(np.mean(tem_acc))
                 tem_acc.clear()
                 ind = ind+1
@@ -143,7 +145,7 @@ def compute_NCM_img_id(input,target,n_support):
         return target_cpu.eq(c).nonzero().squeeze(1)
     support_idxs = list(map(supp_idxs, classes))
     prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
-    NCM = torch.zeros([n_support,1]).long()
+    NCM = torch.zeros([1,n_support]).long()
     #print(classes)
     for i,c in enumerate(classes):
         c_img = class_img(c)
@@ -154,11 +156,13 @@ def compute_NCM_img_id(input,target,n_support):
         ord_dis,index = torch.sort(dis,dim=0,descending=False)
         #print(ord_dis)
         #print(index)
-        img_index = c_img[index].unsqueeze(1)
+        img_index = c_img[index]
         #print(c_img)
         #print(img_index)
-        NCM = torch.cat([NCM,img_index[:n_support]],dim=1)
+        NCM = torch.cat([NCM,img_index[:n_support].unsqueeze(0)],dim=0)
         #print("NCM:{}".format(NCM.size()))
+    #print(NCM)
+    #print(NCM.view(-1).squeeze())
     return NCM[1:]
 
 
