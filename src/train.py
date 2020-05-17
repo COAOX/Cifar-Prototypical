@@ -133,7 +133,6 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage, biasLayer):
                     count=0
 
     avg_accm = np.mean(avg_acc)
-    print(label)
     print('Test Acc: {}'.format(avg_accm))
     print('Test Acc: {}'.format(avg_acc))
 
@@ -321,7 +320,6 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 best_state = model.state_dict()
         
         for epoch in range(opt.Bias_epoch):
-            biasLayer.printParam(inc_i*100+epoch)
             for i, (x, y) in enumerate(tqdm(tr_dataloader)):
                 bisoptim.zero_grad()
                 x, y = x.to(device), y.squeeze().to(device)
