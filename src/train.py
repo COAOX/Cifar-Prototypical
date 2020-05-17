@@ -1,9 +1,10 @@
 # coding=utf-8
 from prototypical_batch_sampler import PrototypicalBatchSampler
 from prototypical_loss import prototypical_loss as loss_fn
+from prototypical_loss import BiasLayer
 from omniglot_dataset import OmniglotDataset
 from protonet import ProtoNet
-from model import PreResNet, BiasLayer
+from model import PreResNet
 from parser_util import get_parser
 from cifar import Cifar100
 from torch.utils.data import DataLoader
@@ -97,7 +98,7 @@ def save_list_to_file(path, thelist):
         for item in thelist:
             f.write("%s\n" % item)
 
-def testf(opt, test_dataloader, model, prototypes, n_per_stage):
+def testf(opt, test_dataloader, model, prototypes, n_per_stage, biasLayer):
     '''
     Test the model trained with the prototypical learning algorithm
     '''
@@ -106,22 +107,24 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage):
     device = 'cuda:0' if torch.cuda.is_available() and opt.cuda else 'cpu'
     avg_acc = list()
     tem_acc = list()
+    label = list()
     ind = 0
     count=0
     stage_acc = list()
     for epoch in range(10):
         
         for i, (x, y) in enumerate(tqdm(test_dataloader)):
-            t = y.squeeze(-1).size(0)
-            
+            t = y.squeeze(-1)
+            label.extend([ty.item() for ty in t])
             x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
             _, acc= loss_fn(model_output, target=y,
-                             n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=None)
+                             n_support=opt.num_support_val, opt=opt, old_prototypes=prototypes,inc_i=None,biasLayer = biasLayer)
             avg_acc.append(acc.item())
             if epoch ==9:
                 tem_acc.append(acc.item())
-                count = count+t
+                count = count+t.size(0)
+                #print(n_per_stage)
                 if ind<len(n_per_stage) and count>=n_per_stage[ind]:
                 #print("ind:{}".format(ind))
                     stage_acc.append(np.mean(tem_acc))
@@ -130,9 +133,10 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage):
                     count=0
 
     avg_accm = np.mean(avg_acc)
-    print('Stage Acc: {}'.format(stage_acc))
+    print(label)
     print('Test Acc: {}'.format(avg_accm))
     print('Test Acc: {}'.format(avg_acc))
+
 
     return avg_acc
 
@@ -184,7 +188,7 @@ def get_mem_tr(support_imgs,num_support_NCM):
     return mem_xs,mem_ys
 
 
-def train(opt, model, optim, lr_scheduler):
+def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
     '''
     Train the model with the prototypical learning algorithm
     '''
@@ -258,7 +262,7 @@ def train(opt, model, optim, lr_scheduler):
         test_data = DataLoader(BatchData(test_xs, test_ys, input_transform_eval),
                     batch_size=opt.batch_size, shuffle=False)
         #exemplar.update(total_cls//opt.stage, (train_x, train_y), (val_x, val_y))
-        n_per_stage.append(len(test_data))
+        n_per_stage.append(len(test_data) if len(n_per_stage)==0 else (len(test_data)-n_per_stage[-1]))
         for epoch in range(opt.epochs):
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
@@ -271,16 +275,9 @@ def train(opt, model, optim, lr_scheduler):
                 optim.zero_grad()
                 #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
                 x, y = cx.to(device), cy.squeeze().to(device)
-
                 model_output = model(x)
-                #print(model_output.size())
-                #print("#######model_output:{}".format(model_output.size()))
-
-
-
-                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i)
-
-                loss.backward(retain_graph=True)
+                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer)
+                loss.backward()
                 optim.step()
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
@@ -298,6 +295,9 @@ def train(opt, model, optim, lr_scheduler):
             print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
             lr_scheduler.step()
 
+
+
+
             #if val_dataloader is None:
                 #continue
             model.eval()
@@ -306,7 +306,7 @@ def train(opt, model, optim, lr_scheduler):
             for i, (x, y) in enumerate(tqdm(val_dataloader)):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
-                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_val, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(),inc_i=inc_i)
+                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_val, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(),inc_i=inc_i,biasLayer=biasLayer)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
@@ -320,6 +320,17 @@ def train(opt, model, optim, lr_scheduler):
                 best_acc = avg_acc
                 best_state = model.state_dict()
         
+        for epoch in range(opt.Bias_epoch):
+            biasLayer.printParam(inc_i*100+epoch)
+            for i, (x, y) in enumerate(tqdm(tr_dataloader)):
+                bisoptim.zero_grad()
+                x, y = x.to(device), y.squeeze().to(device)
+                model_output = model(x)
+                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer)
+                loss.backward()
+                bisoptim.step()
+            bias_scheduler.step()
+
         #pp = torch.ones([20,256])
         if inc_i ==0:
             support_imgs = support_img
@@ -334,7 +345,7 @@ def train(opt, model, optim, lr_scheduler):
             #print(prototypes.size())
             prototypes = prototypes.mean(1).to('cpu')
         print('Testing with last model..')
-        testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes.to('cpu'), n_per_stage=n_per_stage)
+        testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes.to('cpu'), n_per_stage=n_per_stage,biasLayer=biasLayer)
 
     model.load_state_dict(best_state)
     print('Testing with best model..')
@@ -386,15 +397,18 @@ def main():
     #val_dataloader = init_dataloader(options, 'val')
     # trainval_dataloader = init_dataloader(options, 'trainval')
     #test_dataloader = init_dataloader(options, 'test')
-    model = PreResNet(32,options.total_cls).cuda()
-    #model = init_protonet(options)
-    model = nn.DataParallel(model, device_ids=[0])
+    #model = PreResNet(32,options.total_cls).cuda()
+    model = init_protonet(options)
+    biasLayer = BiasLayer().cuda()
+    bisoptim= torch.optim.Adam(bias_layers.parameters(), lr=0.001)
+    bias_scheduler = StepLR(bisoptim, step_size=70, gamma=0.1)
+    #model = nn.DataParallel(model, device_ids=[0])
     optim = init_optim(options, model)
     lr_scheduler = init_lr_scheduler(options, optim)
     train(opt=options,
                 model=model,
                 optim=optim,
-                lr_scheduler=lr_scheduler)
+                lr_scheduler=lr_scheduler, biasLayer=biasLayer, bisoptim=bisoptim, bias_scheduler)
 
     print("----------train finished----------")
     # optim = init_optim(options, model)

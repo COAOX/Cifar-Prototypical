@@ -1,8 +1,22 @@
 # coding=utf-8
 import torch
+import torch.nn as nn
 from torch.nn import functional as F
 from torch.nn.modules import Module
 from torch.autograd import Variable
+from parser_util import get_parser
+class BiasLayer(Module):
+    def __init__(self):
+        super(BiasLayer, self).__init__()
+        opt = get_parser().parse_args()
+
+        self.alpha = nn.Parameter(torch.ones((1,opt.total_cls), requires_grad=True, device="cuda"))
+        self.beta = nn.Parameter(torch.zeros((1,opt.total_cls), requires_grad=True, device="cuda"))
+    def forward(self, x):
+        x = x.to('cuda')
+        return self.alpha[0][:x.size(1)].mul(x) + self.beta[0][:x.size(1)]
+    def printParam(self, i):
+        print(i, self.alpha, self.beta)
 
 class PrototypicalLoss(Module):
     '''
@@ -11,7 +25,6 @@ class PrototypicalLoss(Module):
     def __init__(self, n_support):
         super(PrototypicalLoss, self).__init__()
         self.n_support = n_support
-
     def forward(self, input, target, opt, old_prototypes, inc_i):
         return prototypical_loss(input, target, self.n_support, opt, old_prototypes, inc_i)
 
@@ -34,7 +47,7 @@ def euclidean_dist(x, y):
     return torch.pow(x - y, 2).sum(2)
 
 
-def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
+def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i,biasLayer):
     '''
     Inspired by https://github.com/jakesnell/prototypical-networks/blob/master/protonets/models/few_shot.py
 
@@ -102,7 +115,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #print(prototypes.size())
     n_query = len(input_cpu)
     dists = euclidean_dist(input_cpu, prototypes)
-    
+    dists = biasLayer(dists).to('cpu')
     #print(F.log_softmax(-dists, dim=1).size())
     log_p_y = F.log_softmax(-dists, dim=1)
 
@@ -112,8 +125,10 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #target_inds = target_inds.eq()
     #print(dists)
     prototype_dist = euclidean_dist(prototypes,prototypes)
+
     #print(prototype_dist)
     _, y_hat = log_p_y.max(1)
+    #print(prototypes)
     #print(prototype_dist)
     #print(target_cpu)
     #print( y_hat.eq(target_cpu.squeeze()).float().mean())
