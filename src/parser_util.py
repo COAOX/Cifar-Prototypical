@@ -59,11 +59,6 @@ def get_parser():
                         type=int,
                         help='number of samples per stage to use as query for training, default=5',
                         default=5)
-    parser.add_argument('-nsNCM', '--num_support_ite',
-                        type=int,
-                        help='number of samples per stage to use as query for training, default=5',
-                        default=1)
-
     parser.add_argument('-cVa', '--classes_per_it_val',
                         type=int,
                         help='number of random classes per episode for validation, default=5',
@@ -94,5 +89,6 @@ def get_parser():
     parser.add_argument('--stage',default = 5, type = int)
     parser.add_argument('--class_per_stage',default = 20, type = int)
     parser.add_argument('--edge',default = 10000, type = int)
+    parser.add_argument('--NCM_batch',default = 1024, type = int)
 
     return parser

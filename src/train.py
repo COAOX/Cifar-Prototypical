@@ -220,16 +220,17 @@ def train(opt, model, optim, lr_scheduler):
         test_y = dense_to_one_hot(test_y,100)
         test_xs.extend(test_x)
         test_ys.extend(test_y)
-
+        train_xs.clear()
+        train_ys.clear()
         #print(f"train_y:{train_y} ,val_y:{val_y}, test_y:{test_y}")
         #train_xs, train_ys = exemplar.get_exemplar_train()
-        #train_xs.extend(train_x)
-        train_x.extend(val_x)
-        #train_ys.extend(train_y)
-        train_y.extend(val_y)
-        print(len(train_x))
-        print(len(test_xs))
-        tr_dataloader = DataLoader(BatchData(train_x, train_y, input_transform),
+        train_xs.extend(train_x)
+        train_xs.extend(val_x)
+        train_ys.extend(train_y)
+        train_ys.extend(val_y)
+        NCM_dataloader = DataLoader(BatchData(train_xs, train_ys, input_transform),
+                    batch_size=opt.NCM_batch, shuffle=True, drop_last=True)
+        tr_dataloader = DataLoader(BatchData(train_xs, train_ys, input_transform),
                     batch_size=opt.batch_size, shuffle=True, drop_last=True)
         val_dataloader = DataLoader(BatchData(val_x, val_y, input_transform_eval),
                     batch_size=opt.batch_size, shuffle=False)
@@ -263,10 +264,14 @@ def train(opt, model, optim, lr_scheduler):
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
             if epoch == opt.epochs-1:
-                model_output = model(train_x)
-                print("Compute NCM")
-                NCM_img_id = compute_NCM_img_id(model_output,train_y,opt.num_support_tr,opt.num_support_NCM)#num_support_NCM*stage_per_classes
-                support_img = cx.index_select(0,NCM_img_id.view(-1).squeeze())#num_support_NCM*stage_per_classes,img_size
+                for x,y in NCM_dataloader:
+                    cx,y = x.to(device),y.squeeze().to(device)
+                    model_output = model(cx)
+
+                    print("Compute NCM")
+                    NCM_img_id = compute_NCM_img_id(model_output,y,opt.num_support_tr,opt.num_support_NCM)#num_support_NCM*stage_per_classes
+                    support_img = x.index_select(0,NCM_img_id.view(-1).squeeze())#num_support_NCM*stage_per_classes,img_size
+                    break
             avg_loss = np.mean(train_loss)
             avg_acc = np.mean(train_acc)
             print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
@@ -304,8 +309,8 @@ def train(opt, model, optim, lr_scheduler):
         
         if not support_imgs is None:
             prototypes = torch.stack(torch.split(model(support_imgs.to(device)),opt.num_support_NCM,dim=0))#n_class x n_support x prototypes.size()--256
-            print(prototypes)
-            print(prototypes.size())
+            #print(prototypes)
+            #print(prototypes.size())
             prototypes = prototypes.mean(1).to('cpu')
         print('Testing with last model..')
         testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes.to('cpu'), n_per_stage=n_per_stage)
