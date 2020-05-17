@@ -3,6 +3,7 @@ from prototypical_batch_sampler import PrototypicalBatchSampler
 from prototypical_loss import prototypical_loss as loss_fn
 from omniglot_dataset import OmniglotDataset
 from protonet import ProtoNet
+from model import PreResNet, BiasLayer
 from parser_util import get_parser
 from cifar import Cifar100
 from torch.utils.data import DataLoader
@@ -160,13 +161,25 @@ def compute_NCM_img_id(input,target,n_support, num_support_NCM):
         img_index = c_img[index]
         #print(c_img)
         #print(img_index)
+        #print(img_index)
         NCM = torch.cat([NCM,img_index[:num_support_NCM].unsqueeze(0)],dim=0)
         #print("NCM:{}".format(NCM.size()))
     #print(NCM)
     #print(NCM.view(-1).squeeze())
     return NCM[1:]
 
-
+def get_mem_tr(support_imgs,num_support_NCM):
+    if support_imgs is None:
+        return [],[]
+    mem_img = torch.split(support_imgs,num_support_NCM,dim=0) # n_class x n_support_NCM x img.size
+    n_c = len(mem_img)
+    mem_xs=[]
+    mem_ys=[]
+    for i in range(n_c):
+        for m in mem_img[i]:
+            mem_xs.append(np.rollaxis(m.squeeze().numpy(),0,3))
+        mem_ys.extend([i]*num_support_NCM)
+    return mem_xs,mem_ys
 
 
 def train(opt, model, optim, lr_scheduler):
@@ -228,8 +241,14 @@ def train(opt, model, optim, lr_scheduler):
         train_xs.extend(val_x)
         train_ys.extend(train_y)
         train_ys.extend(val_y)
-        NCM_dataloader = DataLoader(BatchData(train_xs, train_ys, input_transform),
+        train_xNCM = train_xs[:]
+        train_yNCM = train_ys[:]
+        NCM_dataloader = DataLoader(BatchData(train_xNCM, train_yNCM, input_transform),
                     batch_size=opt.NCM_batch, shuffle=True, drop_last=True)
+        mem_xs,mem_ys = get_mem_tr(support_imgs,opt.num_support_NCM)
+
+        train_xs.extend(mem_xs)
+        train_ys.extend(mem_ys)
         tr_dataloader = DataLoader(BatchData(train_xs, train_ys, input_transform),
                     batch_size=opt.batch_size, shuffle=True, drop_last=True)
         val_dataloader = DataLoader(BatchData(val_x, val_y, input_transform_eval),
@@ -365,8 +384,9 @@ def main():
     #val_dataloader = init_dataloader(options, 'val')
     # trainval_dataloader = init_dataloader(options, 'trainval')
     #test_dataloader = init_dataloader(options, 'test')
-
-    model = init_protonet(options)
+    model = PreResNet(32,options.total_cls).cuda()
+    #model = init_protonet(options)
+    model = nn.DataParallel(self.model, device_ids=[0])
     optim = init_optim(options, model)
     lr_scheduler = init_lr_scheduler(options, optim)
     train(opt=options,

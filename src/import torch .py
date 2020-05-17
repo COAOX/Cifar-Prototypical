@@ -1,4 +1,5 @@
+import numpy as np
 import torch
-s = torch.arange(0,10)
-nn = [(int)(ss/10) for ss in s]
-print(nn)
+A= np.arange(6).reshape(1,2,3)
+print(A)
+print(np.rollaxis(A,2).shape)

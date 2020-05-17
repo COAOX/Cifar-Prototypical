@@ -102,6 +102,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i):
     #print(prototypes.size())
     n_query = len(input_cpu)
     dists = euclidean_dist(input_cpu, prototypes)
+    
     #print(F.log_softmax(-dists, dim=1).size())
     log_p_y = F.log_softmax(-dists, dim=1)
 

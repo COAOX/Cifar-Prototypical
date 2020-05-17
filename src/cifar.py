@@ -2,10 +2,12 @@ import pickle
 import numpy as np
 import os
 import random
+from parser_util import get_parser
 
 class Cifar100:
     def __init__(self):
-        with open('cifar100/train','rb') as f:
+        options = get_parser().parse_args()
+        with open('cifar100/{}'.format(options.Data_file),'rb') as f:
             self.train = pickle.load(f, encoding='latin1')
         with open('cifar100/test','rb') as f:
             self.test = pickle.load(f, encoding='latin1')
