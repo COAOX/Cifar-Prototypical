@@ -83,7 +83,7 @@ def get_parser():
                         action='store_true',
                         help='enables cuda')
     parser.add_argument('--batch_size', default = 32, type = int)
-    parser.add_argument('--lr', default = 0.1, type = int)
+    parser.add_argument('--lr', default = 0.01, type = int)
     parser.add_argument('--max_size', default = 2000, type = int)
     parser.add_argument('--total_cls', default = 100, type = int)
     parser.add_argument('--stage',default = 5, type = int)

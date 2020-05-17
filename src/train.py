@@ -400,15 +400,15 @@ def main():
     #model = PreResNet(32,options.total_cls).cuda()
     model = init_protonet(options)
     biasLayer = BiasLayer().cuda()
-    bisoptim= torch.optim.Adam(bias_layers.parameters(), lr=0.001)
-    bias_scheduler = StepLR(bisoptim, step_size=70, gamma=0.1)
+    bisoptim= torch.optim.Adam(biasLayer.parameters(), lr=0.01)
+    bias_scheduler = torch.optim.lr_scheduler.StepLR(bisoptim, step_size=70, gamma=0.1)
     #model = nn.DataParallel(model, device_ids=[0])
     optim = init_optim(options, model)
     lr_scheduler = init_lr_scheduler(options, optim)
     train(opt=options,
                 model=model,
                 optim=optim,
-                lr_scheduler=lr_scheduler, biasLayer=biasLayer, bisoptim=bisoptim, bias_scheduler)
+                lr_scheduler=lr_scheduler, biasLayer=biasLayer, bisoptim=bisoptim, bias_scheduler=bias_scheduler)
 
     print("----------train finished----------")
     # optim = init_optim(options, model)
