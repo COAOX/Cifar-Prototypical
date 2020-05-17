@@ -17,6 +17,7 @@ import torch
 import os
 import argparse
 import copy
+import torch.nn as nn
 
 
 
@@ -128,8 +129,9 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage):
                     ind = ind+1
                     count=0
 
-    avg_acc = np.mean(avg_acc)
+    avg_accm = np.mean(avg_acc)
     print('Stage Acc: {}'.format(stage_acc))
+    print('Test Acc: {}'.format(avg_accm))
     print('Test Acc: {}'.format(avg_acc))
 
     return avg_acc
@@ -386,7 +388,7 @@ def main():
     #test_dataloader = init_dataloader(options, 'test')
     model = PreResNet(32,options.total_cls).cuda()
     #model = init_protonet(options)
-    model = nn.DataParallel(self.model, device_ids=[0])
+    model = nn.DataParallel(model, device_ids=[0])
     optim = init_optim(options, model)
     lr_scheduler = init_lr_scheduler(options, optim)
     train(opt=options,

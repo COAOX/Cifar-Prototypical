@@ -3,7 +3,6 @@ import torch
 from torch import nn, autograd
 import torchvision.models as models
 from torch.nn import functional as F
-import utils
 
 
 import torch.nn as nn
@@ -114,7 +113,6 @@ class PreResNet(nn.Module):
         self.bn = nn.BatchNorm2d(64 * block.expansion)
         self.relu = nn.ReLU(inplace=True)
         self.avgpool = nn.AvgPool2d(8)
-        self.fc = nn.Linear(64 * block.expansion, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -150,11 +148,7 @@ class PreResNet(nn.Module):
         x = self.relu(x)
 
         x = self.avgpool(x)
-        print("pre forward size: {}".format(x.size()))
         x = x.view(x.size(0), -1)
-        print("forward size: {}".format(x.size()))
-        x = self.fc(x)
-
         return x
 
 
