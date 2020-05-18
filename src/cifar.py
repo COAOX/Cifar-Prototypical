@@ -6,8 +6,8 @@ from parser_util import get_parser
 
 class Cifar100:
     def __init__(self):
-        options = get_parser().parse_args()
-        with open('cifar100/{}'.format(options.Data_file),'rb') as f:
+        self.options = get_parser().parse_args()
+        with open('cifar100/{}'.format(self.options.Data_file),'rb') as f:
             self.train = pickle.load(f, encoding='latin1')
         with open('cifar100/test','rb') as f:
             self.test = pickle.load(f, encoding='latin1')
@@ -30,7 +30,7 @@ class Cifar100:
             train_data_g = train_data[1024:2048].reshape(32, 32)
             train_data_b = train_data[2048:].reshape(32, 32)
             train_data = np.dstack((train_data_r, train_data_g, train_data_b))
-            nn = (int)(train_label/20)
+            nn = (int)(train_label/self.options.class_per_stage)
             train_groups[nn].append((train_data,train_label))
 
         val_groups = [[],[],[],[],[]]
@@ -38,7 +38,6 @@ class Cifar100:
             lle = len(train_groups[i])
             print("dataset size i: "+str(i)+" , len: "+str(lle))
             val_groups[i] = train_groups[i][int(0.9*lle):]
-            train_groups[i] = train_groups[i][:int(0.9*lle)]
 
         test_groups = [[],[],[],[],[]]
         for test_data, test_label in zip(self.test_data, self.test_labels):
@@ -46,7 +45,7 @@ class Cifar100:
             test_data_g = test_data[1024:2048].reshape(32, 32)
             test_data_b = test_data[2048:].reshape(32, 32)
             test_data = np.dstack((test_data_r, test_data_g, test_data_b))
-            nn = (int)(test_label/20)
+            nn = (int)(test_label/self.options.class_per_stage)
             test_groups[nn].append((test_data,test_label))
         return train_groups, val_groups, test_groups
 

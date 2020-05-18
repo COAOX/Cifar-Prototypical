@@ -125,7 +125,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i,biasL
     #target_inds = target_inds.eq()
     #print(dists)
     prototype_dist = euclidean_dist(prototypes,prototypes)
-
+    
     #print(prototype_dist)
     _, y_hat = log_p_y.max(1)
     #print(prototypes)
@@ -145,9 +145,14 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i,biasL
     #torch.masked_select(log_p_y, target_ninds.bool()).mean()
     proto_dist_mask = prototype_dist.eq(0)
     proto_dist_mask = proto_dist_mask.eq(0)
-    dis_loss = torch.rsqrt(torch.masked_select(prototype_dist,proto_dist_mask.bool())).mean()
+    dist_loss = -torch.masked_select(prototype_dist,proto_dist_mask.bool()).mean()
 
-    loss_val = dis_loss-torch.masked_select(log_p_y,target_inds.bool()).mean() #+log_p_y.squeeze().view(-1).mean()
+     #+log_p_y.squeeze().view(-1).mean()
+    if opt.lossF=='NCM':
+        loss_val = 1000+dist_loss-torch.masked_select(log_p_y,target_inds.bool()).mean()
+    else:
+        entropy = nn.CrossEntropyLoss()
+        loss_val= 1000+dist_loss+entropy(F.softmax(-dists,dim=1),target_cpu)
     #print(log_p_y.size())
     #print(log_p_y)
 

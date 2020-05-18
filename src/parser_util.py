@@ -92,4 +92,5 @@ def get_parser():
     parser.add_argument('--NCM_batch',default = 1024, type = int)
     parser.add_argument('--Data_file',default = 'train_meta', type = str)
     parser.add_argument('--Bias_epoch',default = 50, type = int)
+    parser.add_argument('--lossF',default = 'NCM', type = str)
     return parser
