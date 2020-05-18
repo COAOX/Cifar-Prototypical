@@ -255,7 +255,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
         train_xs.extend(mem_xs)
         train_ys.extend(mem_ys)
         tr_dataloader = DataLoader(BatchData(train_xs, train_ys, input_transform),
-                    batch_size=opt.batch_size, shuffle=True, drop_last=True)
+                    batch_size=opt.batch_size, shuffle=False, drop_last=True)
         val_dataloader = DataLoader(BatchData(val_x, val_y, input_transform_eval),
                     batch_size=opt.batch_size, shuffle=False)
         test_data = DataLoader(BatchData(test_xs, test_ys, input_transform_eval),
@@ -280,6 +280,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 optim.step()
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
+                
             if epoch == opt.epochs-1:
                 for x,y in NCM_dataloader:
                     cx,y = x.to(device),y.squeeze().to(device)
@@ -302,8 +303,8 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
             model.eval()
             val_acc.clear()
             val_loss.clear()
-            for i, (x, y) in enumerate(tqdm(val_dataloader)):
-                x, y = x.to(device), y.squeeze().to(device)
+            for i, (x, cy) in enumerate(tqdm(val_dataloader)):
+                x, y = x.to(device), cy.squeeze().to(device)
                 model_output = model(x)
                 loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_val, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(),inc_i=inc_i,biasLayer=biasLayer)
                 val_loss.append(loss.item())
