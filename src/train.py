@@ -120,7 +120,7 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage, biasLayer):
             label.extend([ty.item() for ty in t])
             x, y = x.to(device), y.squeeze(-1).to(device)
             model_output = model(x)
-            _, acc= loss_fn(model_output, target=y,
+            _, acc,_= loss_fn(model_output, target=y,
                               opt=opt, old_prototypes=prototypes,inc_i=None,biasLayer = biasLayer)
             avg_acc.append(acc.item())
             if epoch ==9:
@@ -279,13 +279,13 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
                 x, y = cx.to(device), cy.squeeze().to(device)
                 model_output = model(x)
-                loss, acc= loss_fn(model_output, target=y, opt=opt, 
+                loss, acc, n_prototypes= loss_fn(model_output, target=y, opt=opt, 
                     old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer)
                 if not prototypes is None:
                     for mx,my in mem_data:
                         mx,my = mx.to(device), my.squeeze().to(device)
                         model_output = model(mx)
-                        loss_distill = proto_distill(model_output,my,prototypes.detach(),opt.num_support_tr)
+                        loss_distill = proto_distill(model_output,my,prototypes.detach(),opt.num_support_tr,n_prototypes)
                         print(loss_distill)
                         loss = loss+opt.distillR*loss_distill
                         break
@@ -307,10 +307,6 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
             avg_acc = np.mean(train_acc)
             print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
             lr_scheduler.step()
-
-
-
-
             #if val_dataloader is None:
                 #continue
             model.eval()
@@ -319,7 +315,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
             for i, (x, y) in enumerate(tqdm(val_dataloader)):
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
-                loss, acc= loss_fn(model_output, target=y, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(),inc_i=inc_i,biasLayer=biasLayer)
+                loss, acc,_= loss_fn(model_output, target=y, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(),inc_i=inc_i,biasLayer=biasLayer)
                 val_loss.append(loss.item())
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
@@ -338,7 +334,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 bisoptim.zero_grad()
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
-                loss, acc= loss_fn(model_output, target=y, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer)
+                loss, acc, _= loss_fn(model_output, target=y, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer)
                 loss.backward()
                 bisoptim.step()
             bias_scheduler.step()
@@ -451,7 +447,7 @@ def dense_to_one_hot(labels_dense, num_classes):
     #print(f"onehot: {y_onehot}")
     return labels_dense
 
-def proto_distill(model_output,target,old_prototypes,num_support_tr):
+def proto_disti(model_output,target,old_prototypes,num_support_tr):
     target_cpu = target.to('cpu')
     input_cpu = model_output.to('cpu')
     def supp_idxs(c):
@@ -464,11 +460,29 @@ def proto_distill(model_output,target,old_prototypes,num_support_tr):
         print(new_prototypes.size())
         print(old_prototypes.size())
         print(classes)
-    T=3
+    T=2
     pre_p = F.softmax(old_prototypes/T,dim=1)
     p = F.log_softmax(new_prototypes/T,dim=1)
     return -torch.mean(torch.sum(pre_p * p, dim=1))*T*T
 
+def proto_distill(model_output,target,old_prototypes,num_support_tr,n_prototypes):
+    target_cpu = target.to('cpu')
+    input_cpu = model_output.to('cpu')
+    def supp_idxs(c):
+        return target_cpu.eq(c).nonzero()[:num_support_tr].squeeze(1)
+    classes = target_cpu.unique()
+    support_idxs = list(map(supp_idxs, classes))
+    new_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
+
+    if new_prototypes.size()!=old_prototypes.size():
+        print(new_prototypes.size())
+        print(old_prototypes.size())
+        print(classes)
+    p = F.softmax(old_prototypes - new_prototypes,dim=1)
+    loss_p = p.mul(new_prototypes).sum(1).mean(0)
+    n_p = F.log_softmax(old_prototypes- new_prototypes,dim=1)
+    loss_p = loss_p-n_p.mul(n_prototypes).sum(1).mean(0)
+    return loss_p
 
 if __name__ == '__main__':
     main()
