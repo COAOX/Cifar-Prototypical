@@ -166,6 +166,6 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i,biasL
     #loss_val = -log_p_y.gather(1, target_inds).squeeze().view(-1).mean()
     acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
     if not previous_output is None:
-        alpha = inc_i/opt.stage
-        loss_val=loss_soft_target*T*T+(1-alpha)*loss_val
+        alpha = 1/inc_i
+        loss_val=loss_soft_target*T*T+(alpha)*loss_val
     return loss_val,  acc_val
