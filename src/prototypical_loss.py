@@ -47,7 +47,7 @@ def euclidean_dist(x, y):
     return torch.pow(x - y, 2).sum(2)
 
 
-def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i,biasLayer, previous_output):
+def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer):
     '''
     Inspired by https://github.com/jakesnell/prototypical-networks/blob/master/protonets/models/few_shot.py
 
@@ -67,7 +67,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i,biasL
     input_cpu = input.to('cpu')
     def supp_idxs(c):
         # FIXME when torch will support where as np
-        return target_cpu.eq(c).nonzero()[:n_support].squeeze(1)
+        return target_cpu.eq(c).nonzero()[:opt.num_support_tr].squeeze(1)
 
     # FIXME when torch.unique will be available on cuda too
     cn = opt.class_per_stage
@@ -125,12 +125,7 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i,biasL
     #target_inds = target_inds.eq()
     #print(dists)
     #prototype_dist = euclidean_dist(prototypes,prototypes)
-    T = 2
-    if not previous_output is None:
-        with torch.no_grad():
-            pre_p = F.softmax(previous_output/T, dim=1)
-            logp = F.log_softmax(input_cpu/T, dim=1)
-            loss_soft_target = -torch.mean(torch.sum(pre_p * logp, dim=1))
+    
     #print(prototype_dist)
     _, y_hat = log_p_y.max(1)
     #print(prototypes)
@@ -165,7 +160,5 @@ def prototypical_loss(input, target, n_support, opt, old_prototypes, inc_i,biasL
     #print(target_inds)
     #loss_val = -log_p_y.gather(1, target_inds).squeeze().view(-1).mean()
     acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
-    if not previous_output is None:
-        alpha = 1/inc_i
-        loss_val=loss_soft_target*T*T+(alpha)*loss_val
+
     return loss_val,  acc_val
