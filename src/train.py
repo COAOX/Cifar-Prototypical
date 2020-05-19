@@ -340,7 +340,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 bisoptim.zero_grad()
                 x, y = x.to(device), y.squeeze().to(device)
                 model_output = model(x)
-                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer)
+                loss, acc= loss_fn(model_output, target=y, n_support=opt.num_support_tr, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer, previous_output=None)
                 loss.backward()
                 bisoptim.step()
             bias_scheduler.step()
