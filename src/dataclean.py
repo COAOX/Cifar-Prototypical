@@ -7,8 +7,8 @@ parser.add_argument('--seed', default = 15, type = int)
 args=parser.parse_args()
 def choice(i):
     reed = random.random()
-    ind = random.random()
-    n = args.seed**-ind
+    #ind = random.random()
+    n = args.seed**-((100-i)/100)
     #if i<50:
         #n=1.0
     #else:
@@ -34,6 +34,6 @@ for train_d, train_l in zip(train_data, train_labels):
 	res_labels.append(train_l)
 train['data'] = res_data
 train['fine_labels'] = res_labels
-with open('cifar100/train_meta','wb') as f:
+with open('cifar100/train_meta_sort_d','wb') as f:
 	pickle.dump(train, f)
 
