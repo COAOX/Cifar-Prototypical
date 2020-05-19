@@ -136,7 +136,7 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage, biasLayer):
 
     avg_accm = np.mean(avg_acc)
     print('Test Acc: {}'.format(avg_accm))
-    print('Test Acc: {}'.format(list([round(c, 2)] for c in avg_acc[:len(test_dataloader)])))
+    print('Test Acc: {}'.format(list([round(c, 4)] for c in avg_acc[:len(test_dataloader)])))
 
 
     return avg_acc
@@ -285,9 +285,10 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                     for mx,my in mem_data:
                         mx,my = mx.to(device), my.squeeze().to(device)
                         model_output = model(mx)
-                        loss_distill = 1/(inc_i+10)*proto_distill(model_output,my,prototypes.detach(),opt.num_support_tr)
+                        loss_distill = proto_distill(model_output,my,prototypes.detach(),opt.num_support_tr)
                         print(loss_distill)
                         loss = loss+opt.distillR*loss_distill
+                        break
 
                 loss.backward()
                 optim.step()
@@ -458,7 +459,11 @@ def proto_distill(model_output,target,old_prototypes,num_support_tr):
     classes = target_cpu.unique()
     support_idxs = list(map(supp_idxs, classes))
     new_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
-    assert(new_prototypes.size()==old_prototypes.size())
+
+    if new_prototypes.size()!=old_prototypes.size():
+        print(new_prototypes.size())
+        print(old_prototypes.size())
+        print(classes)
     T=3
     pre_p = F.softmax(old_prototypes/T,dim=1)
     p = F.log_softmax(new_prototypes/T,dim=1)

@@ -48,7 +48,7 @@ def get_parser():
     parser.add_argument('-nsTr', '--num_support_tr',
                         type=int,
                         help='number of samples per class to use as support for training, default=5',
-                        default=20)
+                        default=5)
 
     parser.add_argument('-nqTr', '--num_query_tr',
                         type=int,
@@ -58,7 +58,7 @@ def get_parser():
     parser.add_argument('-nsNCM', '--num_support_NCM',
                         type=int,
                         help='number of samples per stage to use as query for training, default=5',
-                        default=10)
+                        default=5)
     parser.add_argument('-cVa', '--classes_per_it_val',
                         type=int,
                         help='number of random classes per episode for validation, default=5',
@@ -67,7 +67,7 @@ def get_parser():
     parser.add_argument('-nsVa', '--num_support_val',
                         type=int,
                         help='number of samples per class to use as support for validation, default=5',
-                        default=10)
+                        default=5)
 
     parser.add_argument('-nqVa', '--num_query_val',
                         type=int,
@@ -93,5 +93,5 @@ def get_parser():
     parser.add_argument('--Data_file',default = 'train_meta', type = str)
     parser.add_argument('--Bias_epoch',default = 30, type = int)
     parser.add_argument('--lossF',default = 'NCM', type = str)
-    parser.add_argument('--distillR',default = 0.1, type = int)
+    parser.add_argument('--distillR',default = 0.01, type = int)
     return parser
