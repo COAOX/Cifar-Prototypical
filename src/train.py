@@ -478,10 +478,10 @@ def proto_distill(model_output,target,old_prototypes,num_support_tr,n_prototypes
         print(new_prototypes.size())
         print(old_prototypes.size())
         print(classes)
-    p = F.softmax(old_prototypes - new_prototypes,dim=1)
-    loss_p = p.mul(new_prototypes).sum(1).mean(0)
-    n_p = F.log_softmax(old_prototypes- new_prototypes,dim=1)
-    loss_p = loss_p-n_p.mul(n_prototypes).sum(1).mean(0)
+    p = F.softmax((2*old_prototypes - new_prototypes).mul(new_prototypes),dim=1)
+    loss_p = p.sum(1).mean(0)
+    n_p = F.log_softmax((2*old_prototypes- new_prototypes).mul(n_prototypes),dim=1)
+    loss_p = loss_p-n_p.sum(1).mean(0)
     return loss_p
 
 if __name__ == '__main__':
