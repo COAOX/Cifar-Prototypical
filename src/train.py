@@ -262,7 +262,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
         test_data = DataLoader(BatchData(test_xs, test_ys, input_transform_eval),
                     batch_size=opt.batch_size, shuffle=False)
         mem_data = DataLoader(BatchData(mem_xs, mem_ys, input_transform_eval),
-                    batch_size=512, shuffle=False)
+                    batch_size=512, shuffle=False, drop_last=False)
         #exemplar.update(total_cls//opt.stage, (train_x, train_y), (val_x, val_y))
         n_per_stage.append(len(test_data) if len(n_per_stage)==0 else (len(test_data)-n_per_stage[-1]))
         for epoch in range(opt.epochs):
@@ -272,7 +272,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
             train_acc.clear()
             train_loss.clear()
             #optim.zero_grad()
-            
+            t_prototypes=None
             for i, (cx, cy) in enumerate(tqdm(tr_dataloader)):
 
                 optim.zero_grad()
@@ -280,20 +280,21 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 x, y = cx.to(device), cy.squeeze().to(device)
                 model_output = model(x)
                 loss, acc, n_prototypes= loss_fn(model_output, target=y, opt=opt, 
-                    old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer)
-                if not prototypes is None:
+                    old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer,t_prototypes=t_prototypes.detach())
+                '''if not prototypes is None:
                     for mx,my in mem_data:
                         mx,my = mx.to(device), my.squeeze().to(device)
                         model_output = model(mx)
-                        loss_distill = proto_distill(model_output,my,prototypes.detach(),opt.num_support_tr,n_prototypes)
+                        loss_distill = proto_distill(model_output,my,prototypes.detach(),opt,n_prototypes)
                         print(loss_distill)
-                        loss = loss+opt.distillR*loss_distill
-                        break
+                        #loss = loss+opt.distillR*loss_distill
+                        break'''
 
                 loss.backward()
                 optim.step()
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
+                t_prototypes = n_prototypes
             if epoch == opt.epochs-1:
                 for x,y in NCM_dataloader:
                     cx,y = x.to(device),y.squeeze().to(device)
@@ -465,11 +466,11 @@ def proto_disti(model_output,target,old_prototypes,num_support_tr):
     p = F.log_softmax(new_prototypes/T,dim=1)
     return -torch.mean(torch.sum(pre_p * p, dim=1))*T*T
 
-def proto_distill(model_output,target,old_prototypes,num_support_tr,n_prototypes):
+def proto_distill(model_output,target,old_prototypes,opt,n_prototypes):
     target_cpu = target.to('cpu')
     input_cpu = model_output.to('cpu')
     def supp_idxs(c):
-        return target_cpu.eq(c).nonzero()[:num_support_tr].squeeze(1)
+        return target_cpu.eq(c).nonzero().squeeze(1)
     classes = target_cpu.unique()
     support_idxs = list(map(supp_idxs, classes))
     new_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
@@ -478,11 +479,17 @@ def proto_distill(model_output,target,old_prototypes,num_support_tr,n_prototypes
         print(new_prototypes.size())
         print(old_prototypes.size())
         print(classes)
-    p = F.softmax((2*old_prototypes - new_prototypes).mul(new_prototypes),dim=1)
-    loss_p = p.sum(1).mean(0)
-    n_p = F.log_softmax((2*old_prototypes- new_prototypes).mul(n_prototypes),dim=1)
-    loss_p = loss_p-n_p.sum(1).mean(0)
-    return loss_p
+    pro_dis = euclidean_dist(new_prototypes,old_prototypes)
+    pro_dist = pro_dist.where(pro_dis==0,torch.full_like(pro_dis, 0.01),pro_dis)
+    d = pro_dist.size(0)
+    self_ind = torch.ones(pro_dist.size()).long()
+    self_ind = self_ind.scatter_(dim=1,index = torch.arange(d).long(), src = torch.ones(d,d).long())
+    self_nind = self_ind.eq(0)
+    loss_push = torch.masked_select(torch.rsqrt(torch.pow(pro_dist,2)),self_nind.bool()).mean()
+    loss_pill = torch.masked_select(F.softmax(pro_dis,dim=1),self_ind).mean()
+    print(loss_push)
+    print(loss_pill)
+    return opt.pillR*loss_pill+opt.pushR*loss_push
 
 if __name__ == '__main__':
     main()

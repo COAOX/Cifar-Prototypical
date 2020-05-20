@@ -93,5 +93,6 @@ def get_parser():
     parser.add_argument('--Data_file',default = 'train_meta', type = str)
     parser.add_argument('--Bias_epoch',default = 30, type = int)
     parser.add_argument('--lossF',default = 'NCM', type = str)
-    parser.add_argument('--distillR',default = 0.01, type = int)
+    parser.add_argument('--pushR',default = 0.1, type = float)
+    parser.add_argument('--pillR',default = 0.5, type = float)
     return parser

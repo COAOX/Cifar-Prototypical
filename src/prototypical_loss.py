@@ -47,7 +47,7 @@ def euclidean_dist(x, y):
     return torch.pow(x - y, 2).sum(2)
 
 
-def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer):
+def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prototypes=None):
     '''
     Inspired by https://github.com/jakesnell/prototypical-networks/blob/master/protonets/models/few_shot.py
 
@@ -155,7 +155,13 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer):
         loss_val= c_dist_loss+entropy(F.softmax(-dists,dim=1),target_cpu)
     #print(log_p_y.size())
     #print(log_p_y)
-
+    if not t_prototypes is None:
+        self_dist = euclidean_dist(n_prototypes,t_prototypes)
+        d = self_dist.size(0)
+        self_ind = torch.zeros(self_dist.size()).long()
+        self_ind = self_ind.scatter_(dim=1,index = torch.arange(d).long(), src = torch.ones(d,d).long())
+        self_dist_loss = torch.masked_select(F.softmax(self_dist,dim=1),self_ind.bool()).mean()
+        loss_val = loss_val+self_dist_loss
     #print(y_hat)
     #print(target_inds)
     #loss_val = -log_p_y.gather(1, target_inds).squeeze().view(-1).mean()
