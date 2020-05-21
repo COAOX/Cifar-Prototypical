@@ -285,7 +285,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                     for mx,my in mem_data:
                         mx,my = mx.to(device), my.squeeze().to(device)
                         model_output = model(mx)
-                        loss_distill = proto_distill(model_output,my,prototypes.detach(),opt,n_prototypes)
+                        loss_distill = proto_distill(model_output,my,prototypes.detach(),opt,n_prototypes,inc_i)
                         
                         #loss = loss+opt.distillR*loss_distill
                         break
@@ -466,7 +466,7 @@ def proto_disti(model_output,target,old_prototypes,num_support_tr):
     p = F.log_softmax(new_prototypes/T,dim=1)
     return -torch.mean(torch.sum(pre_p * p, dim=1))*T*T
 
-def proto_distill(model_output,target,old_prototypes,opt,n_prototypes):
+def proto_distill(model_output,target,old_prototypes,opt,n_prototypes,inc_i):
     target_cpu = target.to('cpu')
     input_cpu = model_output.to('cpu')
     def supp_idxs(c):
@@ -491,7 +491,7 @@ def proto_distill(model_output,target,old_prototypes,opt,n_prototypes):
     #loss_push = torch.masked_select(torch.rsqrt(torch.pow(pro_dist,2)),self_nind.bool()).mean()
     loss_push = torch.rsqrt(n_dis).sum(1).mean()
     loss_pill = torch.masked_select(F.softmax(pro_dis,dim=1),self_ind.bool()).mean()
-    return opt.pillR*loss_pill+opt.pushR*loss_push
+    return opt.pillR*(inc_i+1)*loss_pill+opt.pushR/(inc_i+1)*loss_push
 
 if __name__ == '__main__':
     main()
