@@ -334,7 +334,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 best_acc = avg_acc
                 best_state = model.state_dict()
         
-        '''for epoch in range(opt.Bias_epoch):
+        for epoch in range(opt.Bias_epoch):
             for i, (x, y) in enumerate(tqdm(tr_dataloader)):
                 bisoptim.zero_grad()
                 x, y = x.to(device), y.squeeze().to(device)
@@ -342,7 +342,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 loss, acc, _= loss_fn(model_output, target=y, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer)
                 loss.backward()
                 bisoptim.step()
-            bias_scheduler.step()'''
+            bias_scheduler.step()
 
         #pp = torch.ones([20,256])
         if inc_i ==0:
