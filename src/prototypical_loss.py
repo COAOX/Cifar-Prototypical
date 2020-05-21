@@ -137,6 +137,7 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     target_inds = torch.zeros(len(target_cpu),n_classes).long()
     
     target_inds = target_inds.scatter_(dim=1, index=target_cpu.unsqueeze(1).long(), src=torch.ones(len(target_cpu), n_classes).long())
+
     #target_inds = target_inds.transpose(0,1)
     #print(target_inds.size())
     #print(log_p_y.type())
@@ -158,8 +159,8 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     if not t_prototypes is None:
         self_dist = euclidean_dist(n_prototypes,t_prototypes)
         d = self_dist.size(0)
-        self_ind = torch.zeros(self_dist.size()).long()
-        self_ind = self_ind.scatter_(dim=1,index = torch.arange(d).long(), src = torch.ones(d,d).long())
+        self_ind = torch.zeros(d,d).long()
+        self_ind = self_ind.scatter_(dim=1,index = torch.arange(d).unsqueeze(0).long(), src = torch.ones(d,d).long())
         self_dist_loss = torch.masked_select(F.softmax(self_dist,dim=1),self_ind.bool()).mean()
         loss_val = loss_val+self_dist_loss
     #print(y_hat)

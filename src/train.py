@@ -280,15 +280,15 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 x, y = cx.to(device), cy.squeeze().to(device)
                 model_output = model(x)
                 loss, acc, n_prototypes= loss_fn(model_output, target=y, opt=opt, 
-                    old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer,t_prototypes=t_prototypes.detach())
-                '''if not prototypes is None:
+                    old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer,t_prototypes=None if t_prototypes is None else t_prototypes.detach())
+                if not prototypes is None:
                     for mx,my in mem_data:
                         mx,my = mx.to(device), my.squeeze().to(device)
                         model_output = model(mx)
                         loss_distill = proto_distill(model_output,my,prototypes.detach(),opt,n_prototypes)
-                        print(loss_distill)
+                        
                         #loss = loss+opt.distillR*loss_distill
-                        break'''
+                        break
 
                 loss.backward()
                 optim.step()
@@ -474,21 +474,23 @@ def proto_distill(model_output,target,old_prototypes,opt,n_prototypes):
     classes = target_cpu.unique()
     support_idxs = list(map(supp_idxs, classes))
     new_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
-
+    T=3
     if new_prototypes.size()!=old_prototypes.size():
         print(new_prototypes.size())
         print(old_prototypes.size())
         print(classes)
     pro_dis = euclidean_dist(new_prototypes,old_prototypes)
-    pro_dist = pro_dist.where(pro_dis==0,torch.full_like(pro_dis, 0.01),pro_dis)
+    n_dis = euclidean_dist(n_prototypes,old_prototypes)/T
+    n_dis = torch.where(n_dis==0,torch.full_like(n_dis, 0.01),n_dis)
+    pro_dist = torch.where(pro_dis==0,torch.full_like(pro_dis, 0.01),pro_dis)
+    pro_dist = pro_dist/T
     d = pro_dist.size(0)
-    self_ind = torch.ones(pro_dist.size()).long()
-    self_ind = self_ind.scatter_(dim=1,index = torch.arange(d).long(), src = torch.ones(d,d).long())
-    self_nind = self_ind.eq(0)
-    loss_push = torch.masked_select(torch.rsqrt(torch.pow(pro_dist,2)),self_nind.bool()).mean()
-    loss_pill = torch.masked_select(F.softmax(pro_dis,dim=1),self_ind).mean()
-    print(loss_push)
-    print(loss_pill)
+    self_ind = torch.zeros(d,d).long()
+    self_ind = self_ind.scatter_(dim=1,index = torch.arange(d).unsqueeze(1).long(), src = torch.ones(d,d).long())
+    #self_nind = self_ind.eq(0)
+    #loss_push = torch.masked_select(torch.rsqrt(torch.pow(pro_dist,2)),self_nind.bool()).mean()
+    loss_push = torch.rsqrt(n_dis).sum(1).mean()
+    loss_pill = torch.masked_select(F.softmax(pro_dis,dim=1),self_ind.bool()).mean()
     return opt.pillR*loss_pill+opt.pushR*loss_push
 
 if __name__ == '__main__':
