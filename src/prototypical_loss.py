@@ -181,6 +181,7 @@ def com_proto(img_input):
     n = img_input.size(1)
     d = img_input.size(2)
     ori_prototypes = img_input.mean(1)
-    dis_factor = F.softmax(torch.pow((ori_prototypes.expand(n_class,n,d)-img_input),2).sum(2),dim=1)#size = n
-    prototypes = img_input.mul(dis_factor.expand(n_class,n,d)).sum(1)
+    dis_factor = F.softmax(torch.rsqrt(torch.pow((ori_prototypes.unsqueeze(1).expand(n_class,n,d)-img_input),2).sum(2)),dim=1)#size = n
+
+    prototypes = img_input.mul(dis_factor.unsqueeze(2).expand(n_class,n,d)).sum(1)
     return prototypes #n_class x d

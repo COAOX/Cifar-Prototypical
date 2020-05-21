@@ -173,12 +173,12 @@ def compute_NCM_img_id(input_cpu,target,n_support, num_support_NCM):
         return target_cpu.eq(c).nonzero().squeeze(1)
     support_idxs = list(map(supp_idxs, classes))
     
-    NCM = torch.zeros([1,num_support_NCM]).long()
+    NCM = torch.zeros([1,num_support_NCM]).long().to('cuda')
     for i,class_index in enumerate(support_idxs):
         n = len(class_index)
         d = input_cpu.size(1)
         img = input_cpu[class_index]
-        proto = com_proto(img.unsqueeze(0)).squeeze(0)
+        proto = com_proto(img.unsqueeze(0))
         dis = torch.pow((proto.expand(n,d)-img),2).sum(1)
         ord_dis,index = torch.sort(dis,dim=0,descending=False)
         img_index = class_index[index]
