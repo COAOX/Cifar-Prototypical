@@ -202,7 +202,7 @@ def get_mem_tr(support_imgs,num_support_NCM):
     return mem_xs,mem_ys
 
 
-def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
+def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim):
     '''
     Train the model with the prototypical learning algorithm
     '''
@@ -355,7 +355,6 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 loss, acc, _= loss_fn(model_output, target=y, opt=opt, old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer)
                 loss.backward()
                 bisoptim.step()
-            bias_scheduler.step()
 
         #pp = torch.ones([20,256])
         if inc_i ==0:
@@ -428,14 +427,13 @@ def main():
     model = init_protonet(options)
     biasLayer = BiasLayer().cuda()
     bisoptim= torch.optim.Adam(biasLayer.parameters(), lr=0.1)
-    bias_scheduler = torch.optim.lr_scheduler.StepLR(bisoptim, step_size=70, gamma=0.1)
     #model = nn.DataParallel(model, device_ids=[0])
     optim = init_optim(options, model)
     lr_scheduler = init_lr_scheduler(options, optim)
     train(opt=options,
                 model=model,
                 optim=optim,
-                lr_scheduler=lr_scheduler, biasLayer=biasLayer, bisoptim=bisoptim, bias_scheduler=bias_scheduler)
+                lr_scheduler=lr_scheduler, biasLayer=biasLayer, bisoptim=bisoptim)
     
     print("----------train finished----------")
     # optim = init_optim(options, model)
