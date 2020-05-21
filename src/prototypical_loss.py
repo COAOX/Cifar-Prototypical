@@ -95,7 +95,7 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
         prototypes = torch.cat([old_prototypes,n_prototypes],dim=0)
     else:
         prototypes = n_prototypes
-
+    print(prototypes.size())
     #print("loss prototypes:{}".format(prototypes))
 
     n_classes = prototypes.size()[0]
