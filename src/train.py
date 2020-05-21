@@ -3,6 +3,7 @@ from prototypical_batch_sampler import PrototypicalBatchSampler
 from prototypical_loss import prototypical_loss as loss_fn
 from prototypical_loss import BiasLayer
 from prototypical_loss import euclidean_dist
+from prototypical_loss import com_proto
 from omniglot_dataset import OmniglotDataset
 from protonet import ProtoNet
 from model import PreResNet
@@ -140,40 +141,52 @@ def testf(opt, test_dataloader, model, prototypes, n_per_stage, biasLayer):
 
 
     return avg_acc
-
-
-
+'''
 def compute_NCM_img_id(input,target,n_support, num_support_NCM):
     target_cpu = target.to('cpu')
     input_cpu = input.to('cpu')
     classes = torch.unique(target_cpu)
     def supp_idxs(c):
-        # FIXME when torch will support where as np
         return target_cpu.eq(c).nonzero()[:n_support].squeeze(1)
     def class_img(c):
         return target_cpu.eq(c).nonzero().squeeze(1)
     support_idxs = list(map(supp_idxs, classes))
     prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
     NCM = torch.zeros([1,num_support_NCM]).long()
-    #print(classes)
     for i,c in enumerate(classes):
         c_img = class_img(c)
         d = input_cpu.size(1)
         n = len(c_img)
         dis = torch.pow(input_cpu[c_img]-prototypes[i].expand(n,d),2).sum(1)
-        #print(dis)
         ord_dis,index = torch.sort(dis,dim=0,descending=False)
-        #print(ord_dis)
-        #print(index)
         img_index = c_img[index]
-        #print(c_img)
-        #print(img_index)
-        #print(img_index)
         NCM = torch.cat([NCM,img_index[:num_support_NCM].unsqueeze(0)],dim=0)
-        #print("NCM:{}".format(NCM.size()))
-    #print(NCM)
-    #print(NCM.view(-1).squeeze())
     return NCM[1:]
+'''
+
+def compute_NCM_img_id(input_cpu,target,n_support, num_support_NCM):
+    target_cpu = target
+    classes = torch.unique(target_cpu)
+    def supp_idxs(c):
+        return target_cpu.eq(c).nonzero().squeeze(1)
+    def class_img(c):
+        return target_cpu.eq(c).nonzero().squeeze(1)
+    support_idxs = list(map(supp_idxs, classes))
+    
+    NCM = torch.zeros([1,num_support_NCM]).long()
+    for i,class_index in enumerate(support_idxs):
+        n = len(class_index)
+        d = input_cpu.size(1)
+        img = input_cpu[class_index]
+        proto = com_proto(img.unsqueeze(0)).squeeze(0)
+        dis = torch.pow((proto.expand(n,d)-img),2).sum(1)
+        ord_dis,index = torch.sort(dis,dim=0,descending=False)
+        img_index = class_index[index]
+        NCM = torch.cat([NCM,img_index[:num_support_NCM].unsqueeze(0)],dim=0)
+    return NCM[1:].to('cpu')
+ 
+
+
 
 def get_mem_tr(support_imgs,num_support_NCM):
     if support_imgs is None:
@@ -242,8 +255,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
         test_y = dense_to_one_hot(test_y,100)
         test_xs.extend(test_x)
         test_ys.extend(test_y)
-        test_vx.extend(val_x)
-        test_vy.extend(val_y)
+
         train_xs.clear()
         train_ys.clear()
         #print(f"train_y:{train_y} ,val_y:{val_y}, test_y:{test_y}")
@@ -263,8 +275,8 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                     batch_size=opt.batch_size, shuffle=True, drop_last=True)
         val_dataloader = DataLoader(BatchData(val_x, val_y, input_transform_eval),
                     batch_size=opt.batch_size, shuffle=False)
-        test_data = DataLoader(BatchData(test_vx, test_vy, input_transform_eval),
-                    batch_size=opt.batch_size, shuffle=False)
+        test_data = DataLoader(BatchData(test_xs, test_ys, input_transform_eval),
+                    batch_size=opt.batch_size*2, shuffle=True)
         mem_data = DataLoader(BatchData(mem_xs, mem_ys, input_transform_eval),
                     batch_size=512, shuffle=False, drop_last=False)
         #exemplar.update(total_cls//opt.stage, (train_x, train_y), (val_x, val_y))
@@ -356,7 +368,8 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
             prototypes = torch.stack(torch.split(model(support_imgs.to(device)),opt.num_support_NCM,dim=0))#n_class x n_support x prototypes.size()--256
             #print(prototypes)
             #print(prototypes.size())
-            prototypes = prototypes.mean(1).to('cpu')
+            
+            prototypes = com_proto(prototypes).to('cpu')
         print('Testing with last model..')
         testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes.to('cpu'), n_per_stage=n_per_stage,biasLayer=biasLayer)
         biasLayer.printParam(0)
@@ -495,7 +508,7 @@ def proto_distill(model_output,target,old_prototypes,opt,n_prototypes,inc_i):
     #loss_push = torch.masked_select(torch.rsqrt(torch.pow(pro_dist,2)),self_nind.bool()).mean()
     loss_push = torch.rsqrt(n_dis).sum(1).mean()
     loss_pill = torch.masked_select(F.softmax(pro_dis,dim=1),self_ind.bool()).mean()
-    return opt.pillR*(inc_i+1)*loss_pill+opt.pushR/(inc_i+1)*loss_push
+    return opt.pillR*(T**inc_i)*loss_pill+opt.pushR/(inc_i+1)*loss_push
 
 if __name__ == '__main__':
     main()

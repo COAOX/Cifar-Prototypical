@@ -5,6 +5,7 @@ from torch.nn import functional as F
 from torch.nn.modules import Module
 from torch.autograd import Variable
 from parser_util import get_parser
+
 class BiasLayer(Module):
     def __init__(self):
         super(BiasLayer, self).__init__()
@@ -84,22 +85,25 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     #if not old_prototypes is None:
     #    print(old_prototypes.size()[0])
     #print((inc_i+1)*opt.class_per_stage)
-    n_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
+    n_prototypes = torch.stack([com_proto(input_cpu[idx_list].unsqueeze(0)).squeeze(0) for idx_list in support_idxs])
     n_prototypes = n_prototypes.where(n_prototypes==n_prototypes,torch.full(n_prototypes.size(),opt.edge))
     #prototypes = torch.cat([old_prototypes,n_prototypes.clone()],dim=0)
-    if old_prototypes is None or inc_i is None:
+
+    if old_prototypes is None:
         prototypes = n_prototypes
+    elif inc_i is None:
+        prototypes = old_prototypes
     elif old_prototypes.size()[0]>=(inc_i+1)*opt.class_per_stage:
         prototypes = torch.cat([old_prototypes[:inc_i*opt.class_per_stage],n_prototypes],dim=0)
     elif not old_prototypes is None:
         prototypes = torch.cat([old_prototypes,n_prototypes],dim=0)
     else:
         prototypes = n_prototypes
-    print(prototypes.size())
+
     #print("loss prototypes:{}".format(prototypes))
 
     n_classes = prototypes.size()[0]
-    #print(n_classes)
+
     # FIXME when torch will support where as np
     #print(n_support)
     #print(target_cpu)
@@ -169,3 +173,14 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
 
     return loss_val,  acc_val, n_prototypes
+
+
+def com_proto(img_input):
+    #input size = n_class x len(image) x d
+    n_class = img_input.size(0)
+    n = img_input.size(1)
+    d = img_input.size(2)
+    ori_prototypes = img_input.mean(1)
+    dis_factor = F.softmax(torch.pow((ori_prototypes.expand(n_class,n,d)-img_input),2).sum(2),dim=1)#size = n
+    prototypes = img_input.mul(dis_factor.expand(n_class,n,d)).sum(1)
+    return prototypes #n_class x d
