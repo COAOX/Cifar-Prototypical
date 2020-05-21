@@ -85,7 +85,7 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     #if not old_prototypes is None:
     #    print(old_prototypes.size()[0])
     #print((inc_i+1)*opt.class_per_stage)
-    n_prototypes = torch.stack([com_proto(input_cpu[idx_list].unsqueeze(0)).squeeze(0) for idx_list in support_idxs])
+    n_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
     n_prototypes = n_prototypes.where(n_prototypes==n_prototypes,torch.full(n_prototypes.size(),opt.edge))
     #prototypes = torch.cat([old_prototypes,n_prototypes.clone()],dim=0)
 
@@ -184,4 +184,5 @@ def com_proto(img_input):
     dis_factor = F.softmax(torch.rsqrt(torch.pow((ori_prototypes.unsqueeze(1).expand(n_class,n,d)-img_input),2).sum(2)),dim=1)#size = n
 
     prototypes = img_input.mul(dis_factor.unsqueeze(2).expand(n_class,n,d)).sum(1)
+    prototypes = torch.where(prototypes==0,torch.full_like(prototypes, 0.0001),prototypes)
     return prototypes #n_class x d

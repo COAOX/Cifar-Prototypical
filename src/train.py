@@ -242,8 +242,10 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
     n_per_stage = []
     support_imgs = None
     prototypes = None
+    
     for inc_i in range(opt.stage):
         #exemplar.clear()
+        next_flag = False
         print(f"Incremental num : {inc_i}")
         train, val, test = dataset.getNextClasses(inc_i)
         train_x, train_y = zip(*train)
@@ -255,7 +257,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
         test_y = dense_to_one_hot(test_y,100)
         test_xs.extend(test_x)
         test_ys.extend(test_y)
-
+        print(train_y.unique())
         train_xs.clear()
         train_ys.clear()
         #print(f"train_y:{train_y} ,val_y:{val_y}, test_y:{test_y}")
@@ -282,6 +284,8 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
         #exemplar.update(total_cls//opt.stage, (train_x, train_y), (val_x, val_y))
         n_per_stage.append(len(test_data) if len(n_per_stage)==0 else (len(test_data)-n_per_stage[-1]))
         for epoch in range(opt.epochs):
+            if next_flag:
+                break
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
             model.train()
@@ -322,6 +326,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                     break
             avg_loss = np.mean(train_loss)
             avg_acc = np.mean(train_acc)
+            
             print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
             lr_scheduler.step()
             #if val_dataloader is None:
@@ -337,6 +342,8 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
             avg_acc = np.mean(val_acc)
+            if avg_acc>=0.71 and inc_i!=0:
+                next_flag = True
             postfix = ' (Best)' if avg_acc >= best_acc else ' (Best: {})'.format(
                 best_acc)
             print('Avg Val Loss: {}, Avg Val Acc: {}{}'.format(
