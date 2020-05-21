@@ -245,7 +245,6 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
     
     for inc_i in range(opt.stage):
         #exemplar.clear()
-        next_flag = False
         print(f"Incremental num : {inc_i}")
         train, val, test = dataset.getNextClasses(inc_i)
         train_x, train_y = zip(*train)
@@ -257,7 +256,6 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
         test_y = dense_to_one_hot(test_y,100)
         test_xs.extend(test_x)
         test_ys.extend(test_y)
-        print(train_y.unique())
         train_xs.clear()
         train_ys.clear()
         #print(f"train_y:{train_y} ,val_y:{val_y}, test_y:{test_y}")
@@ -284,8 +282,6 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
         #exemplar.update(total_cls//opt.stage, (train_x, train_y), (val_x, val_y))
         n_per_stage.append(len(test_data) if len(n_per_stage)==0 else (len(test_data)-n_per_stage[-1]))
         for epoch in range(opt.epochs):
-            if next_flag:
-                break
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
             model.train()
@@ -315,7 +311,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
                 t_prototypes = n_prototypes
-            if epoch == opt.epochs-1:
+            if epoch == int(opt.epochs/(inc_i+1))-1:
                 for x,y in NCM_dataloader:
                     cx,y = x.to(device),y.squeeze().to(device)
                     model_output = model(cx)
@@ -342,8 +338,6 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 val_acc.append(acc.item())
             avg_loss = np.mean(val_loss)
             avg_acc = np.mean(val_acc)
-            if avg_acc>=0.71 and inc_i!=0:
-                next_flag = True
             postfix = ' (Best)' if avg_acc >= best_acc else ' (Best: {})'.format(
                 best_acc)
             print('Avg Val Loss: {}, Avg Val Acc: {}{}'.format(
@@ -376,7 +370,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
             #print(prototypes)
             #print(prototypes.size())
             
-            prototypes = com_proto(prototypes).to('cpu')
+            prototypes = prototypes.mean(1).to('cpu')
         print('Testing with last model..')
         testf(opt=opt, test_dataloader=test_data, model=model, prototypes=prototypes.to('cpu'), n_per_stage=n_per_stage,biasLayer=biasLayer)
         biasLayer.printParam(0)

@@ -23,17 +23,17 @@ def get_parser():
     parser.add_argument('-lr', '--learning_rate',
                         type=float,
                         help='learning rate for the model, default=0.001',
-                        default=0.001)
+                        default=0.01)
 
     parser.add_argument('-lrS', '--lr_scheduler_step',
                         type=int,
                         help='StepLR learning rate scheduler step, default=20',
-                        default=20)
+                        default=50)
 
     parser.add_argument('-lrG', '--lr_scheduler_gamma',
                         type=float,
                         help='StepLR learning rate scheduler gamma, default=0.5',
-                        default=0.5)
+                        default=0.2)
 
     parser.add_argument('-its', '--iterations',
                         type=int,
