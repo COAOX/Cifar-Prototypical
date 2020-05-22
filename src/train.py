@@ -202,7 +202,7 @@ def get_mem_tr(support_imgs,num_support_NCM):
     return mem_xs,mem_ys
 
 
-def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim):
+def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
     '''
     Train the model with the prototypical learning algorithm
     '''
@@ -266,11 +266,12 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim):
         train_ys.extend(val_y)
         train_xNCM = train_xs[:]
         train_yNCM = train_ys[:]
+
         NCM_dataloader = DataLoader(BatchData(train_xNCM, train_yNCM, input_transform),
                     batch_size=opt.NCM_batch, shuffle=True, drop_last=True)
         mem_xs,mem_ys = get_mem_tr(support_imgs,opt.num_support_NCM)
-        train_xs.extend(mem_xs)
-        train_ys.extend(mem_ys)
+        #train_xs.extend(mem_xs)
+        #train_ys.extend(mem_ys)
         tr_dataloader = DataLoader(BatchData(train_xs, train_ys, input_transform),
                     batch_size=opt.batch_size, shuffle=True, drop_last=True)
         val_dataloader = DataLoader(BatchData(val_x, val_y, input_transform_eval),
@@ -281,7 +282,8 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim):
                     batch_size=512, shuffle=False, drop_last=False)
         #exemplar.update(total_cls//opt.stage, (train_x, train_y), (val_x, val_y))
         n_per_stage.append(len(test_data) if len(n_per_stage)==0 else (len(test_data)-n_per_stage[-1]))
-        for epoch in range(opt.epochs):
+        
+        for epoch in range(opt.epochs-5*inc_i):
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
             model.train()
@@ -291,31 +293,46 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim):
             t_prototypes=None
             for i, (cx, cy) in enumerate(tqdm(tr_dataloader)):
 
+
                 optim.zero_grad()
                 #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
                 x, y = cx.to(device), cy.squeeze().to(device)
+                nt = y.size()
                 model_output = model(x)
                 loss, acc, n_prototypes= loss_fn(model_output, target=y, opt=opt, 
                     old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer,t_prototypes=None if t_prototypes is None else t_prototypes.detach())
+                loss_distill = 0
                 if not prototypes is None:
                     for mx,my in mem_data:
                         mx,my = mx.to(device), my.squeeze().to(device)
+                        nm = my.size()
+                        imsize1,imsize2,imsize3 = mx.size(1),mx.size(2),mx.size(3)
+                        if opt.mix:
+                            mix_mem = mx.unsqueeze(1).expand(nm,nt,imsize1,imsize2,imsize3)
+                            mix_tr = x.unsqueeze(0).expand(nm,nt,imsize1,imsize2,imsize3)
+                            mixup = (mix_mem+mix_tr)/2
+                            mixup = mixup.view(-1,imsize1,imsize2,imsize3).
+                            mixup = torch.cat([mixup,mixup],dim=0)
+                            y1 = torch.cat([cy,cy],dim=0)
+                            y2 = my.unsqueeze(1).expand(nm,nt)
+                            y2 = y2.contiguous().view(-1)
+                            mix_y = torch.cat([y1,y2],dim=0)
+                            mix_output = model(mixup)
+                            mix_loss,_,_ = loss_fn(mix_output,target=mix_y, opt=opt,old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer,t_prototypes=None if t_prototypes is None else t_prototypes.detach())
+                            loss = loss+mix_loss
                         model_output = model(mx)
-                        loss_distill = proto_distill(model_output,my,prototypes.detach(),opt,n_prototypes,inc_i)
+                        loss_distill = loss_distill+proto_distill(model_output,my,prototypes.detach(),opt,n_prototypes,inc_i)
                         
-                        #loss = loss+opt.distillR*loss_distill
-                        break
-
+                loss = loss+loss_distill
                 loss.backward()
                 optim.step()
                 train_loss.append(loss.item())
                 train_acc.append(acc.item())
                 t_prototypes = n_prototypes
-            if epoch == int(opt.epochs/(inc_i+1))-1:
+            if epoch +1== opt.epochs-5*inc_i:
                 for x,y in NCM_dataloader:
                     cx,y = x.to(device),y.squeeze().to(device)
                     model_output = model(cx)
-
                     print("Compute NCM")
                     NCM_img_id = compute_NCM_img_id(model_output,y,opt.num_support_tr,opt.num_support_NCM)#num_support_NCM*stage_per_classes
                     support_img = x.index_select(0,NCM_img_id.view(-1).squeeze())#num_support_NCM*stage_per_classes,img_size
@@ -423,17 +440,18 @@ def main():
     #val_dataloader = init_dataloader(options, 'val')
     # trainval_dataloader = init_dataloader(options, 'trainval')
     #test_dataloader = init_dataloader(options, 'test')
-    #model = PreResNet(32,options.total_cls).cuda()
-    model = init_protonet(options)
+    model = PreResNet(32,options.total_cls).cuda()
+    #model = init_protonet(options)
     biasLayer = BiasLayer().cuda()
-    bisoptim= torch.optim.Adam(biasLayer.parameters(), lr=0.01)
+    bisoptim= torch.optim.Adam(biasLayer.parameters(), lr=0.001)
+    bias_scheduler = torch.optim.lr_scheduler.StepLR(bisoptim, step_size=10, gamma=5)
     #model = nn.DataParallel(model, device_ids=[0])
     optim = init_optim(options, model)
     lr_scheduler = init_lr_scheduler(options, optim)
     train(opt=options,
                 model=model,
                 optim=optim,
-                lr_scheduler=lr_scheduler, biasLayer=biasLayer, bisoptim=bisoptim)
+                lr_scheduler=lr_scheduler, biasLayer=biasLayer, bisoptim=bisoptim, bias_scheduler=bias_scheduler)
     
     print("----------train finished----------")
     # optim = init_optim(options, model)
@@ -495,7 +513,7 @@ def proto_distill(model_output,target,old_prototypes,opt,n_prototypes,inc_i):
         print(new_prototypes.size())
         print(old_prototypes.size())
         print(classes)
-    pro_dis = euclidean_dist(new_prototypes,old_prototypes)
+    pro_dis = euclidean_dist(new_prototypes,old_prototypes)/T
     n_dis = euclidean_dist(n_prototypes,old_prototypes)/T
     n_dis = torch.where(n_dis==0,torch.full_like(n_dis, 0.01),n_dis)
     pro_dist = torch.where(pro_dis==0,torch.full_like(pro_dis, 0.01),pro_dis)

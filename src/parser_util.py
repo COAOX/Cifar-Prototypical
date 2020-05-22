@@ -23,7 +23,7 @@ def get_parser():
     parser.add_argument('-lr', '--learning_rate',
                         type=float,
                         help='learning rate for the model, default=0.001',
-                        default=0.01)
+                        default=0.001)
 
     parser.add_argument('-lrS', '--lr_scheduler_step',
                         type=int,
@@ -94,5 +94,7 @@ def get_parser():
     parser.add_argument('--Bias_epoch',default = 30, type = int)
     parser.add_argument('--lossF',default = 'NCM', type = str)
     parser.add_argument('--pushR',default = 0.1, type = float)
-    parser.add_argument('--pillR',default = 0.5, type = float)
+    parser.add_argument('--pillR',default = 0.1, type = float)
+    parser.add_argument('--mix',
+                        action='store_true')
     return parser

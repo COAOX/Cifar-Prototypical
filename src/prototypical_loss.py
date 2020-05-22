@@ -177,6 +177,7 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
 
 def com_proto(img_input):
     #input size = n_class x len(image) x d
+    return img_input.mean(1)
     n_class = img_input.size(0)
     n = img_input.size(1)
     d = img_input.size(2)
