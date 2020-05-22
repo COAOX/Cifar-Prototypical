@@ -96,5 +96,5 @@ def get_parser():
     parser.add_argument('--pushR',default = 0.1, type = float)
     parser.add_argument('--pillR',default = 0.1, type = float)
     parser.add_argument('--mix',
-                        action='store_true')
+                        action='store_true',help='enables mix')
     return parser

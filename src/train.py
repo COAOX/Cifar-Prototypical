@@ -279,11 +279,11 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
         test_data = DataLoader(BatchData(test_xs, test_ys, input_transform_eval),
                     batch_size=opt.batch_size*2, shuffle=True)
         mem_data = DataLoader(BatchData(mem_xs, mem_ys, input_transform_eval),
-                    batch_size=512, shuffle=False, drop_last=False)
+                    batch_size=256, shuffle=False, drop_last=False)
         #exemplar.update(total_cls//opt.stage, (train_x, train_y), (val_x, val_y))
         n_per_stage.append(len(test_data) if len(n_per_stage)==0 else (len(test_data)-n_per_stage[-1]))
         
-        for epoch in range(opt.epochs-5*inc_i):
+        for epoch in range(opt.epochs):
             print('=== Epoch: {} ==='.format(epoch))
             #tr_iter = iter(tr_dataloader)
             model.train()
@@ -297,7 +297,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 optim.zero_grad()
                 #print("x:{},y:{}".format(x.size(),y.squeeze().size()))
                 x, y = cx.to(device), cy.squeeze().to(device)
-                nt = y.size()
+                nt = int(y.size(0)/16)
                 model_output = model(x)
                 loss, acc, n_prototypes= loss_fn(model_output, target=y, opt=opt, 
                     old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer,t_prototypes=None if t_prototypes is None else t_prototypes.detach())
@@ -305,20 +305,21 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 if not prototypes is None:
                     for mx,my in mem_data:
                         mx,my = mx.to(device), my.squeeze().to(device)
-                        nm = my.size()
+                        nm = my.size(0)
                         imsize1,imsize2,imsize3 = mx.size(1),mx.size(2),mx.size(3)
                         if opt.mix:
                             mix_mem = mx.unsqueeze(1).expand(nm,nt,imsize1,imsize2,imsize3)
-                            mix_tr = x.unsqueeze(0).expand(nm,nt,imsize1,imsize2,imsize3)
+                            mix_tr = x[:nt].unsqueeze(0).expand(nm,nt,imsize1,imsize2,imsize3)
                             mixup = (mix_mem+mix_tr)/2
-                            mixup = mixup.view(-1,imsize1,imsize2,imsize3).
+                            mixup = mixup.view(nm*nt,imsize1,imsize2,imsize3)
                             mixup = torch.cat([mixup,mixup],dim=0)
-                            y1 = torch.cat([cy,cy],dim=0)
+                            y1 = torch.cat([y,y],dim=0)
                             y2 = my.unsqueeze(1).expand(nm,nt)
                             y2 = y2.contiguous().view(-1)
                             mix_y = torch.cat([y1,y2],dim=0)
                             mix_output = model(mixup)
-                            mix_loss,_,_ = loss_fn(mix_output,target=mix_y, opt=opt,old_prototypes=None if prototypes is None else prototypes.detach(), inc_i=inc_i,biasLayer=biasLayer,t_prototypes=None if t_prototypes is None else t_prototypes.detach())
+                            mix_loss,_,_ = loss_fn(mix_output,target=mix_y, opt=opt,old_prototypes=None if prototypes is None else torch.cat([prototypes.detach(),n_prototypes],dim=0), inc_i=None,biasLayer=biasLayer,t_prototypes=None if t_prototypes is None else t_prototypes.detach())
+                            print(mix_loss)
                             loss = loss+mix_loss
                         model_output = model(mx)
                         loss_distill = loss_distill+proto_distill(model_output,my,prototypes.detach(),opt,n_prototypes,inc_i)
