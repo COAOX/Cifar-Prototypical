@@ -426,7 +426,7 @@ def main():
     #model = PreResNet(32,options.total_cls).cuda()
     model = init_protonet(options)
     biasLayer = BiasLayer().cuda()
-    bisoptim= torch.optim.Adam(biasLayer.parameters(), lr=0.1)
+    bisoptim= torch.optim.Adam(biasLayer.parameters(), lr=0.01)
     #model = nn.DataParallel(model, device_ids=[0])
     optim = init_optim(options, model)
     lr_scheduler = init_lr_scheduler(options, optim)
