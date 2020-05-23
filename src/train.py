@@ -326,7 +326,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                             mix_output = model(mixup)
                             mix_loss,_,_ = loss_fn(mix_output,target=mix_y, opt=opt,old_prototypes=None if prototypes is None else torch.cat([prototypes.detach(),n_prototypes],dim=0), inc_i=None,biasLayer=biasLayer,t_prototypes=None if t_prototypes is None else t_prototypes.detach())
                             
-                            loss = loss+0.01*mix_loss
+                            loss = loss+0.1*mix_loss
                         model_output = model(dx)
                         loss_distill = loss_distill+proto_distill(model_output,dy,prototypes.detach(),opt,n_prototypes,inc_i)
                         
