@@ -441,7 +441,7 @@ def main():
     #model = init_protonet(options)
     biasLayer = BiasLayer().cuda()
     bisoptim= torch.optim.Adam(biasLayer.parameters(), lr=0.0001)
-    bias_scheduler = torch.optim.lr_scheduler.StepLR(bisoptim, step_size=6, gamma=2)
+    bias_scheduler = torch.optim.lr_scheduler.StepLR(bisoptim, step_size=10, gamma=2)
     #model = nn.DataParallel(model, device_ids=[0])
     optim = init_optim(options, model)
     lr_scheduler = init_lr_scheduler(options, optim)
