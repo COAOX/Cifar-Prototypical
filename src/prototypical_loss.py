@@ -9,13 +9,15 @@ from parser_util import get_parser
 class BiasLayer(Module):
     def __init__(self):
         super(BiasLayer, self).__init__()
-        opt = get_parser().parse_args()
+        self.opt = get_parser().parse_args()
 
-        self.alpha = nn.Parameter(torch.ones((1,opt.total_cls), requires_grad=True, device="cuda"))
-        self.beta = nn.Parameter(torch.zeros((1,opt.total_cls), requires_grad=True, device="cuda"))
+        self.alpha = nn.Parameter(torch.ones(self.opt.total_cls, requires_grad=True, device="cuda"))
+        self.beta = nn.Parameter(torch.zeros(self.opt.total_cls, requires_grad=True, device="cuda"))
     def forward(self, x):
         x = x.to('cuda')
-        return self.alpha[0][:x.size(1)].mul(x) + self.beta[0][:x.size(1)]
+        start,end = x.size(1)-self.opt.class_per_stage,x.size(1)
+        alpha,beta = torch.cat([self.alpha[0:start].detach(),self.alpha[start:end]],dim=0),torch.cat([self.beta[0:start].detach(),self.beta[start:end]],dim=0)
+        return alpha.mul(x) + beta
     def printParam(self, i):
         print(i, self.alpha, self.beta)
 
@@ -39,7 +41,6 @@ def euclidean_dist(x, y):
     n = x.size(0)
     m = y.size(0)
     d = x.size(1)
-    #print("n:{},m:{},d:{},ysize:{}".format(n,m,d,y.size(1)))
     if d != y.size(1):
         raise Exception
     x = x.unsqueeze(1).expand(n, m, d)
@@ -76,7 +77,6 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
         classes = target_cpu.unique()
     else:
         classes = torch.arange(inc_i*cn,(inc_i+1)*cn)
-    #print(target_cpu.unique())
     n_target = len(target_cpu)
     # FIXME when torch will support where as np
     # assuming n_query, n_target constants
@@ -84,7 +84,7 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     support_idxs = list(map(supp_idxs, classes))
     #if not old_prototypes is None:
     #    print(old_prototypes.size()[0])
-    #print((inc_i+1)*opt.class_per_stage)
+    n_prototypes = None
     if not inc_i is None:
         n_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
         n_prototypes = n_prototypes.where(n_prototypes==n_prototypes,torch.full(n_prototypes.size(),opt.edge))
@@ -101,42 +101,28 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     else:
         prototypes = n_prototypes
 
-    #print("loss prototypes:{}".format(prototypes))
 
     n_classes = prototypes.size()[0]
 
     # FIXME when torch will support where as np
-    #print(n_support)
-    #print(target_cpu)
     #for x in classes:
-        #print("{}:{}".format(x,target_cpu.eq(x).nonzero()))
-    #print(list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:], classes)))
+
     #query_idlist = list(map(lambda c: target_cpu.eq(c).nonzero(), classes))
     #query_idxs = torch.cat(query_idlist).view(-1)
-    #print(query_idxs)
     #query_samples = torch.stack([input_cpu[query_lists] for query_lists in query_idxs])
     #query_samples = input_cpu[query_idxs]
-    #print(query_samples.size())
-    #print(prototypes.size())
     n_query = len(input_cpu)
     dists = euclidean_dist(input_cpu, prototypes)
     dists = biasLayer(dists).to('cpu')
-    #print(F.log_softmax(-dists, dim=1).size())
     log_p_y = F.log_softmax(-dists, dim=1)
     softmax_dist = F.softmax(-dists,dim=1)
     #target_inds = torch.arange(0, n_query)
     #target_inds = target_inds.view(1, n_query)
     #target_inds = target_inds.expand(n_classes, n_query).long()
     #target_inds = target_inds.eq()
-    #print(dists)
     #prototype_dist = euclidean_dist(prototypes,prototypes)
     
-    #print(prototype_dist)
     _, y_hat = log_p_y.max(1)
-    #print(prototypes)
-    #print(prototype_dist)
-    #print(target_cpu)
-    #print( y_hat.eq(target_cpu.squeeze()).float().mean())
     #target_inds = torch.arange(0, n_classes).view(n_classes, 1, 1).expand(n_classes, n_query, 1).long()
     #target_inds = Variable(target_inds, requires_grad=False)
     target_inds = torch.zeros(len(target_cpu),n_classes).long()
@@ -144,32 +130,25 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     target_inds = target_inds.scatter_(dim=1, index=target_cpu.unsqueeze(1).long(), src=torch.ones(len(target_cpu), n_classes).long())
 
     #target_inds = target_inds.transpose(0,1)
-    #print(target_inds.size())
-    #print(log_p_y.type())
     #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
     target_ninds = target_inds.eq(0)
     c_dist_loss = torch.masked_select(softmax_dist, target_ninds.bool()).mean()
     #proto_dist_mask = prototype_dist.eq(0)
     #proto_dist_mask = proto_dist_mask.eq(0)
     #dist_loss = torch.rsqrt(torch.masked_select(prototype_dist,proto_dist_mask.bool())).mean()
-    #print(dist_loss)
      #+log_p_y.squeeze().view(-1).mean()
     if opt.lossF=='NCM':
         loss_val = c_dist_loss-torch.masked_select(log_p_y,target_inds.bool()).mean()
     else:
         entropy = nn.CrossEntropyLoss()
         loss_val= c_dist_loss+entropy(F.softmax(-dists,dim=1),target_cpu)
-    #print(log_p_y.size())
-    #print(log_p_y)
-    if not t_prototypes is None:
+    if not t_prototypes is None and not n_prototypes is None:
         self_dist = euclidean_dist(n_prototypes,t_prototypes)
         d = self_dist.size(0)
         self_ind = torch.zeros(d,d).long()
         self_ind = self_ind.scatter_(dim=1,index = torch.arange(d).unsqueeze(0).long(), src = torch.ones(d,d).long())
         self_dist_loss = torch.masked_select(F.softmax(self_dist,dim=1),self_ind.bool()).mean()
         loss_val = loss_val+self_dist_loss
-    #print(y_hat)
-    #print(target_inds)
     #loss_val = -log_p_y.gather(1, target_inds).squeeze().view(-1).mean()
     acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
 
