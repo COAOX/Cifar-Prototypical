@@ -6,6 +6,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--seed', default = 15, type = int)
 args=parser.parse_args()
 rand_list = [random.random() for _ in range(100)]
+print(rand_list)
 def choice(i):
     reed = random.random()
     ind = rand_list[i]

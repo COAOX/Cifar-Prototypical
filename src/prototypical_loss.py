@@ -116,16 +116,20 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     bic_dists = biasLayer(dists).to('cpu')
     log_p_y = F.log_softmax(-bic_dists, dim=1)
     softmax_dist = torch.ones(dists.size(0),dists.size(1))-F.softmax(dists,dim=1)
-    prototype_center = n_prototypes.mean(0)
-    prototype_dist = euclidean_dist(n_prototypes,n_prototypes)
-    d = prototype_dist.size(0)
-    diagonal = torch.eye(d)
-    n_diagonal = diagonal.eq(0).bool()
-    prototype_dist = torch.where(prototype_dist==0,torch.full_like(prototype_dist, 0.0001),prototype_dist)
-    prototype_center_dist = torch.pow(n_prototypes-prototype_center.unsqueeze(0).expand_as(n_prototypes),2).sum(1)
-    prototype_dist_loss = prototype_center_dist.mean().detach().pow(2)/torch.masked_select(prototype_dist,n_diagonal).mean()
+    if not n_prototypes is None:
+        prototype_center = n_prototypes.mean(0)
+        prototype_dist = euclidean_dist(n_prototypes,n_prototypes)
+        d = prototype_dist.size(0)
+        diagonal = torch.eye(d)
+        n_diagonal = diagonal.eq(0).bool()
+        prototype_dist = torch.where(prototype_dist==0,torch.full_like(prototype_dist, 0.0001),prototype_dist)
+        prototype_center_dist = torch.pow(n_prototypes-prototype_center.unsqueeze(0).expand_as(n_prototypes),2).sum(1)
+        prototype_dist_loss = prototype_center_dist.mean().detach().pow(2)/torch.masked_select(prototype_dist,n_diagonal).mean()
 
-    prototype_center_loss = torch.pow(F.softmax(prototype_center_dist),2).sum()
+        prototype_center_loss = torch.pow(F.softmax(prototype_center_dist),2).sum()
+        c_dist_loss = prototype_dist_loss+prototype_center_loss
+    else :
+        c_dist_loss = 0
     #target_inds = torch.arange(0, n_query)
     #target_inds = target_inds.view(1, n_query)
     #target_inds = target_inds.expand(n_classes, n_query).long()
@@ -143,7 +147,7 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     #target_inds = target_inds.transpose(0,1)
     #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
     target_ninds = target_inds.eq(0)
-    c_dist_loss = prototype_dist_loss+prototype_center_loss
+    
     #proto_dist_mask = prototype_dist.eq(0)
     #proto_dist_mask = proto_dist_mask.eq(0)
     #dist_loss = torch.rsqrt(torch.masked_select(prototype_dist,proto_dist_mask.bool())).mean()

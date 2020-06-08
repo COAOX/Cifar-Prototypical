@@ -328,7 +328,7 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                             
                             loss = loss+0.1*mix_loss
                         model_output = model(dx)
-                        loss_distill = loss_distill+proto_distill(model_output,dy,prototypes.detach(),opt,n_prototypes,inc_i)
+                        loss_distill = loss_distill+proto_distill(model_output,dy,prototypes.detach(),opt,n_prototypes,inc_i,opt.centerR)
                         
                 loss = loss+loss_distill
                 loss.backward()
@@ -499,7 +499,7 @@ def proto_disti(model_output,target,old_prototypes,num_support_tr):
     p = F.log_softmax(new_prototypes/T,dim=1)
     return -torch.mean(torch.sum(pre_p * p, dim=1))*T*T
 
-def proto_distill(model_output,target,old_prototypes,opt,n_prototypes,inc_i):
+def proto_distill(model_output,target,old_prototypes,opt,n_prototypes,inc_i,centerR):
     target_cpu = target.to('cpu')
     input_cpu = model_output.to('cpu')
     def supp_idxs(c):
