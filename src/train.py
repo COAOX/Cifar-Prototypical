@@ -366,10 +366,11 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 best_acc)
             print('Avg Val Loss: {}, Avg Val Acc: {}{}'.format(
                 avg_loss, avg_acc, postfix))
-            if avg_acc >= best_acc:
+ '''           if avg_acc >= best_acc:
                 torch.save(model.state_dict(), best_model_path)
                 best_acc = avg_acc
                 best_state = model.state_dict()
+                '''
         
         for epoch in range(opt.Bias_epoch):
             for i, (x, y) in enumerate(tqdm(tr_dataloader)):
@@ -507,15 +508,21 @@ def proto_distill(model_output,target,old_prototypes,opt,n_prototypes,inc_i):
     support_idxs = list(map(supp_idxs, classes))
     new_prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
     T=2
+    R=2
     old_prototypes = old_prototypes[start:end+1]
     if new_prototypes.size()!=old_prototypes.size():
         print(new_prototypes.size())
         print(old_prototypes.size())
         print(classes)
+    old_center =  old_prototypes.mean(0)
+    n_center = n_prototypes.mean(0)
+    max_dis = torch.pow(old_prototypes -old_center.unsqueeze(0).expand_as(old_prototypes),2).sum(1).max()
+    n_center_dis = n_prototypes - old_center.unsqueeze(0).expand_as(n_prototypes)
+    center_loss = (R*max_dis - torch.pow(old_center - n_center,2).sum()).pow(2).rsqrt()
     pro_dis = euclidean_dist(new_prototypes,old_prototypes)/T
     n_dis = euclidean_dist(n_prototypes,old_prototypes)/T
-    n_dis = torch.where(n_dis==0,torch.full_like(n_dis, 0.01),n_dis)
-    pro_dist = torch.where(pro_dis==0,torch.full_like(pro_dis, 0.01),pro_dis)
+    n_dis = torch.where(n_dis==0,torch.full_like(n_dis, 0.0001),n_dis)
+    pro_dist = torch.where(pro_dis==0,torch.full_like(pro_dis, 0.0001),pro_dis)
     pro_dist = pro_dist/T
     d = pro_dist.size(0)
     self_ind = torch.zeros(d,d).long()
@@ -524,7 +531,7 @@ def proto_distill(model_output,target,old_prototypes,opt,n_prototypes,inc_i):
     #loss_push = torch.masked_select(torch.rsqrt(torch.pow(pro_dist,2)),self_nind.bool()).mean()
     loss_push = torch.rsqrt(n_dis).sum(1).mean()
     loss_pill = torch.masked_select(F.softmax(pro_dis,dim=1),self_ind.bool()).mean()
-    return opt.pillR*(T**inc_i)*loss_pill+opt.pushR/(inc_i+1)*loss_push
+    return opt.pillR*(T**inc_i)*loss_pill+opt.pushR/(inc_i+1)*loss_push+centerR*center_loss
 
 if __name__ == '__main__':
     main()

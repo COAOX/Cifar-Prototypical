@@ -113,14 +113,25 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     #query_samples = input_cpu[query_idxs]
     n_query = len(input_cpu)
     dists = euclidean_dist(input_cpu, prototypes)
-    dists = biasLayer(dists).to('cpu')
-    log_p_y = F.log_softmax(-dists, dim=1)
-    softmax_dist = F.softmax(-dists,dim=1)
+    bic_dists = biasLayer(dists).to('cpu')
+    log_p_y = F.log_softmax(-bic_dists, dim=1)
+    softmax_dist = torch.ones(dists.size(0),dists.size(1))-F.softmax(dists,dim=1)
+    prototype_center = n_prototypes.mean(0)
+    prototype_dist = euclidean_dist(n_prototypes,n_prototypes)
+    d = prototype_dist.size(0)
+    diagonal = torch.eye(d)
+    n_diagonal = diagonal.eq(0).bool()
+    prototype_dist = torch.where(prototype_dist==0,torch.full_like(prototype_dist, 0.0001),prototype_dist)
+    prototype_center_dist = torch.pow(n_prototypes-prototype_center.unsqueeze(0).expand_as(n_prototypes),2).sum(1)
+    prototype_dist_loss = prototype_center_dist.mean().detach().pow(2)/torch.masked_select(prototype_dist,n_diagonal).mean()
+
+    prototype_center_loss = torch.pow(F.softmax(prototype_center_dist),2).sum()
     #target_inds = torch.arange(0, n_query)
     #target_inds = target_inds.view(1, n_query)
     #target_inds = target_inds.expand(n_classes, n_query).long()
     #target_inds = target_inds.eq()
     #prototype_dist = euclidean_dist(prototypes,prototypes)
+    prototy_center = prototypes.mean(0)
     
     _, y_hat = log_p_y.max(1)
     #target_inds = torch.arange(0, n_classes).view(n_classes, 1, 1).expand(n_classes, n_query, 1).long()
@@ -132,7 +143,7 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     #target_inds = target_inds.transpose(0,1)
     #target_inds = [target_inds.index_put_(query_idl,query_idl) for query_idl in query_idlist]
     target_ninds = target_inds.eq(0)
-    c_dist_loss = torch.masked_select(softmax_dist, target_ninds.bool()).mean()
+    c_dist_loss = prototype_dist_loss+prototype_center_loss
     #proto_dist_mask = prototype_dist.eq(0)
     #proto_dist_mask = proto_dist_mask.eq(0)
     #dist_loss = torch.rsqrt(torch.masked_select(prototype_dist,proto_dist_mask.bool())).mean()
@@ -142,13 +153,13 @@ def prototypical_loss(input, target, opt, old_prototypes, inc_i,biasLayer,t_prot
     else:
         entropy = nn.CrossEntropyLoss()
         loss_val= c_dist_loss+entropy(F.softmax(-dists,dim=1),target_cpu)
-    if not t_prototypes is None and not n_prototypes is None:
+    '''if not t_prototypes is None and not n_prototypes is None:
         self_dist = euclidean_dist(n_prototypes,t_prototypes)
         d = self_dist.size(0)
         self_ind = torch.zeros(d,d).long()
         self_ind = self_ind.scatter_(dim=1,index = torch.arange(d).unsqueeze(0).long(), src = torch.ones(d,d).long())
         self_dist_loss = torch.masked_select(F.softmax(self_dist,dim=1),self_ind.bool()).mean()
-        loss_val = loss_val+self_dist_loss
+        loss_val = loss_val+self_dist_loss'''
     #loss_val = -log_p_y.gather(1, target_inds).squeeze().view(-1).mean()
     acc_val = y_hat.eq(target_cpu.squeeze()).float().mean()
 
