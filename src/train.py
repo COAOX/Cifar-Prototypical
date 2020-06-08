@@ -366,7 +366,8 @@ def train(opt, model, optim, lr_scheduler, biasLayer, bisoptim, bias_scheduler):
                 best_acc)
             print('Avg Val Loss: {}, Avg Val Acc: {}{}'.format(
                 avg_loss, avg_acc, postfix))
- '''           if avg_acc >= best_acc:
+ '''           
+ if avg_acc >= best_acc:
                 torch.save(model.state_dict(), best_model_path)
                 best_acc = avg_acc
                 best_state = model.state_dict()
